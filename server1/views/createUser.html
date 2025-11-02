@@ -12,14 +12,64 @@
 <body class="min-h-screen">
   <div data-include="templates/header.html"></div>
   <main class="max-w-md mx-auto p-4">
-    <h1 class="text-xl mb-4">create user</h1>
-    <form action='/submitUser' method='post' class="flex flex-col gap-2">
-      <input name='username' type='text' placeholder='username' class="border p-1">
-      <input name='password' type='password' placeholder='password' class="border p-1">
-      <button class="border px-2 py-1">Submit</button>
+    <h1 class="text-xl mb-4">Register User</h1>
+    <form id="registerForm" class="flex flex-col gap-2">
+      <input id="firstName" name="firstName" type="text" placeholder="First Name" class="border p-1" required>
+      <input id="email" name="email" type="email" placeholder="Email Address" class="border p-1" required>
+      <input id="password" name="password" type="password" placeholder="Password (optional)" class="border p-1">
+      <button type="submit" class="border px-2 py-1 bg-blue-500 text-white">Register</button>
     </form>
+    <div id="message" class="mt-4"></div>
   </main>
   <div data-include="templates/footer.html"></div>
+
+  <script>
+    // Get server2 URL - adjust this to match your server2 URL
+    const SERVER2_URL = 'https://comp4537-lab-in-pair-2.onrender.com'; // Update this to your server2 URL
+    
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const firstName = document.getElementById('firstName').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const messageDiv = document.getElementById('message');
+      
+      messageDiv.innerHTML = '<div class="text-blue-500">Registering...</div>';
+      
+      try {
+        const response = await fetch(`${SERVER2_URL}/api/v1/auth/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include', // Important for cookies
+          body: JSON.stringify({ firstName, email, password: password || undefined })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // Store token in localStorage
+          if (result.token) {
+            localStorage.setItem('authToken', result.token);
+            localStorage.setItem('user', JSON.stringify(result.user));
+          }
+          
+          messageDiv.innerHTML = `<div class="text-green-500">${result.message}</div>`;
+          
+          // Redirect to index page after 2 seconds
+          setTimeout(() => {
+            window.location.href = '/index.html?authenticated=true&username=' + encodeURIComponent(result.user.firstName);
+          }, 2000);
+        } else {
+          messageDiv.innerHTML = `<div class="text-red-500">Error: ${result.message}</div>`;
+        }
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="text-red-500">Network error: ${error.message}</div>`;
+      }
+    });
+  </script>
 </body>
 
 </html>

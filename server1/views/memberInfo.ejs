@@ -1,9 +1,0 @@
-<%- include("templates/header", {scripts: ["https://code.jquery.com/jquery-3.6.3.js","/script.js"]}) %> 
-    <h1>Hello <%= username %><% if (user_type=='admin') { %><%= " (admin)" %><% } %>!</h1>
-    <div>
-        This page has javascript, jquery and AJAX! 
-    </div>
-    <div id="dynamic_content">
-        <img src="../public/Spinner.gif">
-    </div>
-<%- include("templates/footer") %> 
