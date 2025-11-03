@@ -38,7 +38,7 @@ if (typeof window !== 'undefined') {
   window.hideApiLimitWarning = hideApiLimitWarning;
 }
 
-async function makeRequest(path, { method = "GET", baseUrl = BACKEND_SERVER_URL, body, auth = false } = {}) {
+async function makeRequest(path, { method = "GET", baseUrl = BACKEND_SERVER_URL, body, auth = false, credentials = "include" } = {}) {
   const headers = { "Content-Type": "application/json" };
   if (auth) {
     const token = getToken();
@@ -49,7 +49,7 @@ async function makeRequest(path, { method = "GET", baseUrl = BACKEND_SERVER_URL,
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
-    credentials: "include",
+    credentials: credentials,
   });
 
   if (respond.status === 401 && auth) {
