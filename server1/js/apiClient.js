@@ -38,14 +38,14 @@ if (typeof window !== 'undefined') {
   window.hideApiLimitWarning = hideApiLimitWarning;
 }
 
-async function makeRequest(path, { method = "GET", body, auth = false } = {}) {
+async function makeRequest(path, { method = "GET", baseUrl = BACKEND_SERVER_URL, body, auth = false } = {}) {
   const headers = { "Content-Type": "application/json" };
   if (auth) {
     const token = getToken();
     if (token) headers["Authorization"] = `Bearer ${token}`; // Attach JWT if available
   }
 
-  const respond = await fetch(`${BACKEND_SERVER_URL}${path}`, {
+  const respond = await fetch(`${baseUrl}${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
