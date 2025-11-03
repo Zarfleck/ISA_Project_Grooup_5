@@ -4,7 +4,7 @@ export const BACKEND_SERVER_URL =
   "https://comp4537-group5-9lwth.ondigitalocean.app/api";
 
 // Base URL for the standalone AI (text-to-speech) microservice
-export const AI_SERVER_URL = "https://effortless-bogus-kaelyn.ngrok-free.dev/api/v1/tts";
+export const AI_SERVER_URL = "https://tree-fares-aluminium-bool.trycloudflare.com/api/v1/tts";
 
 const UI_STRINGS = {
   ERROR_UNAUTHORIZED:
