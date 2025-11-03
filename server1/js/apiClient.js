@@ -119,7 +119,7 @@ export const aiApi = {
       ...(speakerWavBase64 ? { speaker_wav_base64: speakerWavBase64 } : {}),
     };
 
-    return makeRequest("/v1/tts/synthesize", {
+    return makeRequest("/synthesize", {
       method: "POST",
       body: payload,
       baseUrl: AI_SERVER_URL,
