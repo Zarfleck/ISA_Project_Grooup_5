@@ -62,7 +62,7 @@
               placeholder="Type your text here to convert to speech..."></textarea>
           </div>
         </div>
-        <button type="submit"
+        <button id="create-speech-button" type="submit"
           class="inline-flex items-center px-5 py-2.5 mt-4 sm:mt-6 text-sm font-medium text-center text-white bg-sky-700 rounded-lg focus:ring-4 focus:ring-sky-200 dark:focus:ring-sky-900 hover:bg-sky-800">
           Create Speech (Audio)
         </button>
@@ -107,76 +107,76 @@
   <script>
     // --- JAVASCRIPT TO HANDLE ENABLED/DISABLED STATE TOGGLING (FOR DEMO AND FOR REFERENCE) ---
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const convertButton = document.getElementById('convert-button');
+    // document.addEventListener('DOMContentLoaded', () => {
+    //   const convertButton = document.getElementById('convert-button');
 
-      // This button now simulates the successful API response
-      convertButton.addEventListener('click', () => {
-        convertButton.disabled = true;
-        convertButton.textContent = 'Generating...';
+    //   // This button now simulates the successful API response
+    //   convertButton.addEventListener('click', () => {
+    //     convertButton.disabled = true;
+    //     convertButton.textContent = 'Generating...';
 
-        // --- Replace this simulated block with your actual API call ---
+    //     // --- Replace this simulated block with your actual API call ---
 
-        // Simulating API call success after a delay (1.5 seconds)
-        setTimeout(() => {
-          const dummyAudioUrl = "data:audio/wav;base64,UklGRiSAAgBXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhkQIA"; // Placeholder audio data
-          toggleAudioPlayer(true, dummyAudioUrl);
+    //     // Simulating API call success after a delay (1.5 seconds)
+    //     setTimeout(() => {
+    //       const dummyAudioUrl = "data:audio/wav;base64,UklGRiSAAgBXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhkQIA"; // Placeholder audio data
+    //       toggleAudioPlayer(true, dummyAudioUrl);
 
-          convertButton.disabled = false;
-          convertButton.textContent = 'Create Speech (Audio)';
-        }, 1500);
-      });
+    //       convertButton.disabled = false;
+    //       convertButton.textContent = 'Create Speech (Audio)';
+    //     }, 1500);
+    //   });
 
-      // Ensure initial state is disabled (already set in HTML, but good for code clarity)
-      toggleAudioPlayer(false);
-    });
+    //   // Ensure initial state is disabled (already set in HTML, but good for code clarity)
+    //   toggleAudioPlayer(false);
+    // });
 
-    /**
-     * Toggles the visual and functional state of the audio player.
-     * @param {boolean} enabled - If true, enables the player. If false, disables it.
-     * @param {string | null} audioUrl - The URL of the generated audio (e.g., Blob URL or Data URL).
-     */
-    function toggleAudioPlayer(enabled, audioUrl = null) {
-      const audioCard = document.getElementById('audio-card');
-      const audioControls = document.getElementById('audio-player-controls');
-      const audioStatus = document.getElementById('audio-status');
-      const downloadLink = document.getElementById('download-link');
+    // /**
+    //  * Toggles the visual and functional state of the audio player.
+    //  * @param {boolean} enabled - If true, enables the player. If false, disables it.
+    //  * @param {string | null} audioUrl - The URL of the generated audio (e.g., Blob URL or Data URL).
+    //  */
+    // function toggleAudioPlayer(enabled, audioUrl = null) {
+    //   const audioCard = document.getElementById('audio-card');
+    //   const audioControls = document.getElementById('audio-player-controls');
+    //   const audioStatus = document.getElementById('audio-status');
+    //   const downloadLink = document.getElementById('download-link');
 
-      // Define the classes for each state
-      const DISABLED_CLASSES = ['opacity-50', 'cursor-not-allowed', 'bg-gray-100', 'dark:bg-gray-800', 'border-gray-300', 'dark:border-gray-700', 'text-gray-500', 'dark:text-gray-400'];
-      const ENABLED_CLASSES = ['bg-sky-50', 'dark:bg-sky-900/50', 'border-sky-500', 'dark:border-sky-400', 'text-sky-700', 'dark:text-sky-300'];
+    //   // Define the classes for each state
+    //   const DISABLED_CLASSES = ['opacity-50', 'cursor-not-allowed', 'bg-gray-100', 'dark:bg-gray-800', 'border-gray-300', 'dark:border-gray-700', 'text-gray-500', 'dark:text-gray-400'];
+    //   const ENABLED_CLASSES = ['bg-sky-50', 'dark:bg-sky-900/50', 'border-sky-500', 'dark:border-sky-400', 'text-sky-700', 'dark:text-sky-300'];
 
-      if (enabled) {
-        // ENABLED STATE: Active, styled with sky colors
-        audioControls.disabled = false;
-        audioControls.src = audioUrl || ''; // Set the audio source
+    //   if (enabled) {
+    //     // ENABLED STATE: Active, styled with sky colors
+    //     audioControls.disabled = false;
+    //     audioControls.src = audioUrl || ''; // Set the audio source
 
-        audioCard.classList.remove(...DISABLED_CLASSES);
-        audioCard.classList.add(...ENABLED_CLASSES);
+    //     audioCard.classList.remove(...DISABLED_CLASSES);
+    //     audioCard.classList.add(...ENABLED_CLASSES);
 
-        audioStatus.textContent = "Playback ready. Click play to listen.";
-        audioStatus.classList.remove('text-gray-500', 'dark:text-gray-400');
-        audioStatus.classList.add('text-sky-700', 'dark:text-sky-300');
+    //     audioStatus.textContent = "Playback ready. Click play to listen.";
+    //     audioStatus.classList.remove('text-gray-500', 'dark:text-gray-400');
+    //     audioStatus.classList.add('text-sky-700', 'dark:text-sky-300');
 
-        if (audioUrl) {
-          downloadLink.href = audioUrl;
-          downloadLink.classList.remove('hidden');
-        }
+    //     if (audioUrl) {
+    //       downloadLink.href = audioUrl;
+    //       downloadLink.classList.remove('hidden');
+    //     }
 
-      } else {
-        // DISABLED STATE: Muted, grayscale
-        audioControls.disabled = true;
-        audioControls.src = ''; // Clear source
+    //   } else {
+    //     // DISABLED STATE: Muted, grayscale
+    //     audioControls.disabled = true;
+    //     audioControls.src = ''; // Clear source
 
-        audioCard.classList.remove(...ENABLED_CLASSES);
-        audioCard.classList.add(...DISABLED_CLASSES);
+    //     audioCard.classList.remove(...ENABLED_CLASSES);
+    //     audioCard.classList.add(...DISABLED_CLASSES);
 
-        audioStatus.textContent = "Audio is currently disabled. Generate speech to enable playback.";
-        audioStatus.classList.add('text-gray-500', 'dark:text-gray-400');
-        audioStatus.classList.remove('text-sky-700', 'dark:text-sky-300');
-        downloadLink.classList.add('hidden');
-      }
-    }
+    //     audioStatus.textContent = "Audio is currently disabled. Generate speech to enable playback.";
+    //     audioStatus.classList.add('text-gray-500', 'dark:text-gray-400');
+    //     audioStatus.classList.remove('text-sky-700', 'dark:text-sky-300');
+    //     downloadLink.classList.add('hidden');
+    //   }
+    // }
   </script>
 </body>
 
