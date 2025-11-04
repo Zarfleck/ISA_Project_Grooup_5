@@ -27,7 +27,7 @@ const STRINGS = {
         INDEX idx_account_status (account_status)
       ) ENGINE=InnoDB
     `,
-    
+
     VOICE_TABLE: `
       CREATE TABLE IF NOT EXISTS voice (
         voice_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -40,7 +40,7 @@ const STRINGS = {
         INDEX idx_is_active (is_active)
       ) ENGINE=InnoDB
     `,
-    
+
     LANGUAGE_TABLE: `
       CREATE TABLE IF NOT EXISTS language (
         language_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -52,7 +52,7 @@ const STRINGS = {
         INDEX idx_is_active (is_active)
       ) ENGINE=InnoDB
     `,
-    
+
     AUDIO_GENERATION_TABLE: `
       CREATE TABLE IF NOT EXISTS audio_generation (
         generation_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -73,7 +73,7 @@ const STRINGS = {
         FOREIGN KEY (language_id) REFERENCES language(language_id)
       ) ENGINE=InnoDB
     `,
-    
+
     USER_PREFERENCE_TABLE: `
       CREATE TABLE IF NOT EXISTS user_preference (
         preference_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -87,7 +87,7 @@ const STRINGS = {
         FOREIGN KEY (default_language_id) REFERENCES language(language_id)
       ) ENGINE=InnoDB
     `,
-    
+
     API_USAGE_LOG_TABLE: `
       CREATE TABLE IF NOT EXISTS api_usage_log (
         log_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -100,54 +100,99 @@ const STRINGS = {
         INDEX idx_endpoint (endpoint),
         FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE
       ) ENGINE=InnoDB
-    `
+    `,
   },
-  
+
   // Default test data
   DEFAULT_USERS: [
-    { email: 'john@john.com', password: '123', is_admin: false, first_name: 'John', last_name: 'Doe' },
-    { email: 'admin@admin.com', password: '111', is_admin: true, first_name: 'Admin', last_name: 'User' }
+    {
+      email: "john@john.com",
+      password: "123",
+      is_admin: false,
+      first_name: "John",
+      last_name: "Doe",
+    },
+    {
+      email: "admin@admin.com",
+      password: "111",
+      is_admin: true,
+      first_name: "Admin",
+      last_name: "User",
+    },
   ],
-  
+
   DEFAULT_VOICES: [
-    { voice_name: 'Natural Female', voice_code: 'female_natural', description: 'Clear and natural female voice' },
-    { voice_name: 'Professional Male', voice_code: 'male_professional', description: 'Professional male voice for business content' },
-    { voice_name: 'Neutral Voice', voice_code: 'neutral_standard', description: 'Gender-neutral voice option' }
+    {
+      voice_name: "Natural Female",
+      voice_code: "female_natural",
+      description: "Clear and natural female voice",
+    },
+    {
+      voice_name: "Professional Male",
+      voice_code: "male_professional",
+      description: "Professional male voice for business content",
+    },
+    {
+      voice_name: "Neutral Voice",
+      voice_code: "neutral_standard",
+      description: "Gender-neutral voice option",
+    },
   ],
-  
+
   DEFAULT_LANGUAGES: [
-    { language_name: 'English', language_code: 'en' },
-    { language_name: 'Spanish', language_code: 'es' },
-    { language_name: 'French', language_code: 'fr' }
+    { language_name: "English", language_code: "en" },
+    { language_name: "Spanish", language_code: "es" },
+    { language_name: "French", language_code: "fr" },
   ],
-  
+
   // HTTP Response Messages
   RESPONSES: {
-    SUCCESS_INSERT: 'Data inserted successfully',
-    SUCCESS_SELECT: 'Query executed successfully',
-    SUCCESS_AUDIO_GENERATION: 'Audio generation completed successfully',
-    ERROR_INVALID_QUERY: 'Invalid or dangerous query detected',
-    ERROR_DATABASE: 'Database error occurred',
-    ERROR_METHOD: 'Method not allowed',
-    ERROR_MISSING_QUERY: 'SQL query is required',
-    ERROR_SERVER: 'Internal server error',
-    ERROR_AUTHENTICATION: 'Authentication failed',
-    ERROR_API_LIMIT: 'API call limit exceeded'
+    SUCCESS_INSERT: "Data inserted successfully",
+    SUCCESS_SELECT: "Query executed successfully",
+    SUCCESS_AUDIO_GENERATION: "Audio generation completed successfully",
+    ERROR_INVALID_QUERY: "Invalid or dangerous query detected",
+    ERROR_DATABASE: "Database error occurred",
+    ERROR_METHOD: "Method not allowed",
+    ERROR_MISSING_QUERY: "SQL query is required",
+    ERROR_SERVER: "Internal server error",
+    ERROR_AUTHENTICATION: "Authentication failed",
+    ERROR_API_LIMIT: "API call limit exceeded",
   },
-  
+
   // Security Messages
   SECURITY: {
-    BLOCKED_OPERATIONS: ['UPDATE', 'DELETE', 'DROP', 'ALTER', 'TRUNCATE', 'CREATE', 'GRANT', 'REVOKE'],
-    BLOCKED_MESSAGE: 'Operation not allowed for security reasons'
+    BLOCKED_OPERATIONS: [
+      "UPDATE",
+      "DELETE",
+      "DROP",
+      "ALTER",
+      "TRUNCATE",
+      "CREATE",
+      "GRANT",
+      "REVOKE",
+    ],
+    BLOCKED_MESSAGE: "Operation not allowed for security reasons",
   },
-  
+
   // Server Messages
   SERVER: {
-    STARTUP: 'Audio Book Server running on port',
-    DB_CONNECTED: 'Connected to MySQL database',
-    DB_ERROR: 'Database connection failed',
-    TABLES_CREATED: 'Audio Book database tables ready'
-  }
+    STARTUP: "Audio Book Server running on port",
+    DB_CONNECTED: "Connected to MySQL database",
+    DB_ERROR: "Database connection failed",
+    TABLES_CREATED: "Audio Book database tables ready",
+  },
+
+  SIGNUP: {
+    EMAIL_EXISTS: "Email is already registered",
+    FIELDS_REQUIRED: "Email and password are required",
+    USER_REGISTERED: "User registered successfully",
+  },
+
+  LOGIN: {
+    FIELDS_REQUIRED: "Email and password are required",
+    INVALID_CREDENTIALS: "Invalid email or password",
+    LOGIN_SUCCESS: "Login successful",
+  },
 };
 
-module.exports = STRINGS;
+export default STRINGS;

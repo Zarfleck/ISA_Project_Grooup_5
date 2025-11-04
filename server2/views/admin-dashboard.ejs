@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet" />
+</head>
+
+<body class="min-h-screen bg-white dark:bg-gray-900">
+
+  <header class="antialiased">
+    <nav class="bg-white px-4 h-12 lg:px-6 py-2.5 dark:bg-gray-800 shadow-md">
+      <div class="flex flex-wrap items-center justify-between">
+        <div class="flex items-center">
+          <h1 class="text-xl font-bold text-gray-900 dark:text-white mr-4">Admin Dashboard</h1>
+        </div>
+
+        <div class="flex items-center justify-end">
+          <p id="admin-email-display" class="text-md text-center text-gray-500 dark:text-gray-400 mr-6 font-medium">
+            <%= currentAdmin.email %>
+          </p>
+
+          <button type="button" id="logout-btn"
+            class="p-1 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600 transition-colors duration-200">
+            <span class="sr-only">Log out</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              class="lucide lucide-log-out-icon lucide-log-out">
+              <path d="m16 17 5-5-5-5" />
+              <path d="M21 12H9" />
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main class="flex w-full justify-center p-4 sm:p-6 lg:p-10">
+    <div class="py-6 px-4 mx-auto w-full lg:py-10">
+
+      <h2 class="text-2xl font-semibold mb-6 text-gray-900 dark:text-white">User List</h2>
+
+      <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
+        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+          <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+            <tr>
+              <th scope="col" class="px-6 py-3">
+                Email
+              </th>
+              <th scope="col" class="px-6 py-3">
+                First Name
+              </th>
+              <th scope="col" class="px-6 py-3">
+                Last Name
+              </th>
+              <th scope="col" class="px-6 py-3 text-center">
+                Admin
+              </th>
+              <th scope="col" class="px-6 py-3 text-right">
+                API Calls
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (users && users.length> 0) { %>
+              <% users.forEach(function(user) { %>
+                <tr
+                  class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                  <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                    <%= user.email %>
+                  </th>
+                  <td class="px-6 py-4">
+                    <%= user.first_name || '-' %>
+                  </td>
+                  <td class="px-6 py-4">
+                    <%= user.last_name || '-' %>
+                  </td>
+                  <td class="px-6 py-4 text-center">
+                    <% if (user.is_admin) { %>
+                      <svg class="w-5 h-5 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      <% } else { %>
+                        <svg class="w-5 h-5 text-red-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        <% } %>
+                  </td>
+                  <td class="px-6 py-4 text-right font-semibold text-gray-900 dark:text-white">
+                    <span class="text-right font-semibold text-gray-900 dark:text-white">
+                      <%= user.api_calls_used %>
+                    </span>
+                    <span class="text-right font-semibold text-gray-900 dark:text-white">/</span>
+                    <span class="text-right font-semibold text-gray-900 dark:text-white">
+                      <%= user.api_calls_limit %>
+                    </span>
+                  </td>
+                </tr>
+                <% }); %>
+                  <% } else { %>
+                    <tr>
+                      <td colspan="6" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                        No users found.
+                      </td>
+                    </tr>
+                    <% } %>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const logoutBtn = document.getElementById('logout-btn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+          try {
+            // Call the logout route
+            const response = await fetch('/admin/logout', { method: 'GET', credentials: 'include' });
+
+            if (response.redirected) {
+              window.location.href = response.url;
+            } else {
+              window.location.href = '/admin/login';
+            }
+          } catch (error) {
+            console.error('Logout failed:', error);
+            alert('Logout failed. Please try again.');
+          }
+        });
+      }
+    });
+  </script>
+
+</body>
+
+</html>
