@@ -17,7 +17,9 @@ export function showApiLimitWarning(message) {
             </svg>
           </div>
           <div class="ml-3">
-            <p class="text-sm font-medium">${message || UI_STRINGS.API_LIMIT_WARNING}</p>
+            <p class="text-sm font-medium">${
+              message || UI_STRINGS.API_LIMIT_WARNING
+            }</p>
           </div>
         </div>
       </div>
@@ -33,12 +35,21 @@ export function hideApiLimitWarning() {
 }
 
 // Make it available globally for backwards compatibility
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.showApiLimitWarning = showApiLimitWarning;
   window.hideApiLimitWarning = hideApiLimitWarning;
 }
 
-async function makeRequest(path, { method = "GET", baseUrl = BACKEND_SERVER_URL, body, auth = false, credentials = "include" } = {}) {
+async function makeRequest(
+  path,
+  {
+    method = "GET",
+    baseUrl = BACKEND_SERVER_URL,
+    body,
+    auth = false,
+    credentials = "include",
+  } = {}
+) {
   const headers = { "Content-Type": "application/json" };
   if (auth) {
     const token = getToken();
@@ -54,7 +65,7 @@ async function makeRequest(path, { method = "GET", baseUrl = BACKEND_SERVER_URL,
 
   if (respond.status === 401 && auth) {
     clearToken();
-    window.location.href = "login.html";
+    window.location.href = "/views/login.html";
     return;
   }
 
@@ -72,7 +83,7 @@ async function makeRequest(path, { method = "GET", baseUrl = BACKEND_SERVER_URL,
   }
 
   // Check for API limit warning and show it
-  if (data.apiLimitExceeded) {
+  if (data.user?.apiLimitExceeded) {
     showApiLimitWarning();
   }
 
@@ -80,7 +91,7 @@ async function makeRequest(path, { method = "GET", baseUrl = BACKEND_SERVER_URL,
 }
 
 // Temporary endpoints in one place for easy use
-export const api = {
+export const backendApi = {
   login: (email, password) =>
     makeRequest("/auth/login", { method: "POST", body: { email, password } }),
 
@@ -89,20 +100,27 @@ export const api = {
 
   currentUser: () => makeRequest("/auth/me", { method: "GET", auth: true }),
 
-  requestPasswordReset: (email) =>
-    makeRequest("/auth/password/request", { method: "POST", body: { email } }),
+  logout: () =>
+    makeRequest("/auth/logout", { method: "POST", credentials: "include" }),
 
-  verifyResetCode: (email, code) =>
-    makeRequest("/auth/password/verify", {
-      method: "POST",
-      body: { email, code },
-    }),
+  incrementApiUsage: () =>
+    makeRequest("/usage/increment", { method: "POST", auth: true }),
 
-  resetPassword: (email, code, password) =>
-    makeRequest("/auth/password/reset", {
-      method: "POST",
-      body: { email, code, password },
-    }),
+  // requestPasswordReset: (email) =>
+  //   makeRequest("/auth/password/request", { method: "POST", body: { email } }),
+
+  // Routes for password reset flow (not implemented yet)
+  // verifyResetCode: (email, code) =>
+  //   makeRequest("/auth/password/verify", {
+  //     method: "POST",
+  //     body: { email, code },
+  //   }),
+
+  // resetPassword: (email, code, password) =>
+  //   makeRequest("/auth/password/reset", {
+  //     method: "POST",
+  //     body: { email, code, password },
+  //   }),
 };
 
 export const aiApi = {
@@ -127,4 +145,3 @@ export const aiApi = {
     });
   },
 };
-

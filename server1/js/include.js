@@ -1,27 +1,23 @@
-// Simple HTML include loader: fetches and injects fragments into elements with data-include
-document.addEventListener('DOMContentLoaded', async () => {
-  const includeTargets = document.querySelectorAll('[data-include]');
-  
-  for (const el of includeTargets) {
-    const src = el.getAttribute('data-include');
-    if (!src) continue;
+document.addEventListener("DOMContentLoaded", async () => {
+  const includeTargets = document.querySelectorAll("[data-include]");
+
+  // Load all includes in parallel and wait for completion
+  const tasks = Array.from(includeTargets).map(async (element) => {
+    const src = element.getAttribute("data-include");
+    if (!src) return;
     try {
-      const res = await fetch(src, { cache: 'no-cache' });
+      const res = await fetch(src, { cache: "no-cache" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const html = await res.text();
-      el.innerHTML = html;
-      
-      // If header was included, initialize header functionality
-      if (src.includes('header.html')) {
-        // Dynamically load header.js after header is included
-        const script = document.createElement('script');
-        script.type = 'module';
-        script.src = '../js/header.js';
-        document.head.appendChild(script);
-      }
+      element.innerHTML = html;
     } catch (err) {
-      console.error('Failed to include', src, err);
-      el.innerHTML = '';
+      console.error("Failed to include", src, err);
+      element.innerHTML = "";
     }
-  }
+  });
+
+  // Wait until includes are done
+  await Promise.all(tasks);
+
+  document.dispatchEvent(new Event("includesLoaded"));
 });

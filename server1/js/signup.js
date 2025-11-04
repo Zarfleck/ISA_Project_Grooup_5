@@ -3,7 +3,7 @@
 // - Calls placeholder /auth/signup endpoint
 // - Stores token and redirects to home.html
 
-import { api } from "./apiClient.js";
+import { backendApi } from "./apiClient.js";
 import { setToken, redirectIfAuthenticated } from "./auth.js";
 
 redirectIfAuthenticated("home.html");
@@ -30,7 +30,7 @@ signupForm?.addEventListener("submit", async (e) => {
 
   if (submitBtn) submitBtn.disabled = true;
   try {
-    const respond = await api.signup(email, password);
+    const respond = await backendApi.signup(email, password);
     if (respond.success) {
       const token = respond.token || respond.data?.token;
       setToken(token);

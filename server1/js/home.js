@@ -3,29 +3,76 @@
 // - Fetch profile to verify token and check API limits
 
 import { requireAuth } from "./auth.js";
-import { api, aiApi, showApiLimitWarning, hideApiLimitWarning } from './apiClient.js';
+import {
+  backendApi,
+  aiApi,
+  showApiLimitWarning,
+  hideApiLimitWarning,
+} from "./apiClient.js";
 import { base64WavToObjectUrl } from "./audio.js";
 
-requireAuth("login.html");
+requireAuth("login.html"); // Check if we have *any* token?
 
+// Listen to the header inclusion event and attach logout handler
+document.addEventListener("includesLoaded", async () => {
+  // Attach logout handler
+  const logoutBtn = document.getElementById("logout-btn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      logout();
+      localStorage.removeItem("auth_token");
+      window.location.href = "/views/login.html";
+    });
+  }
 
+  // Fetch current user to validate token and display email
+  try {
+    const currentUser = await backendApi.currentUser();
+    const currentUserInfo = currentUser.user;
+    console.log("Current user:", currentUser);
+    const emailPlaceholder = document.getElementById("user-email-placeholder");
+    if (emailPlaceholder) {
+      emailPlaceholder.textContent = currentUserInfo.email;
+    }
+  } catch (err) {
+    console.warn("Token invalid or expired:", err.message);
+    clearToken();
+    window.location.href = "/views/login.html";
+  }
+});
+
+// Logout handler
+async function logout() {
+  try {
+    await backendApi.logout?.();
+  } catch (err) {
+    console.warn("Logout API call failed:", err.message);
+  } finally {
+    clearToken();
+    window.location.href = "/views/login.html";
+  }
+}
 
 // Check user status and API limits on page load
-document.addEventListener('DOMContentLoaded', async () => {
-      await checkCurrentUser();
-      initializeTextToSpeechForm();
-    });
+document.addEventListener("DOMContentLoaded", async () => {
+  await checkCurrentUser();
+  initializeTextToSpeechForm();
+});
 
 async function checkCurrentUser() {
   try {
-    const currentUser = await api.currentUser();
-    if (currentUser.success && currentUser.user && currentUser.user.apiLimitExceeded) {
+    const currentUser = await backendApi.currentUser();
+    if (
+      currentUser.success &&
+      currentUser.user &&
+      currentUser.user.apiLimitExceeded
+    ) {
       showApiLimitWarning();
     } else {
       hideApiLimitWarning();
     }
   } catch (err) {
-    console.warn('Failed to fetch user info:', err);
+    console.warn("Failed to fetch user info:", err);
   }
 }
 
@@ -39,7 +86,16 @@ function initializeTextToSpeechForm() {
   const audioStatus = document.getElementById("audio-status");
   const downloadLink = document.getElementById("download-link");
 
-  if (!form || !languageSelect || !textInput || !submitButton || !audioCard || !audioControls || !audioStatus || !downloadLink) {
+  if (
+    !form ||
+    !languageSelect ||
+    !textInput ||
+    !submitButton ||
+    !audioCard ||
+    !audioControls ||
+    !audioStatus ||
+    !downloadLink
+  ) {
     console.error("Required DOM elements for text-to-speech are missing.");
     return;
   }
@@ -84,7 +140,10 @@ function initializeTextToSpeechForm() {
     );
   }
 
-  function setAudioPlayerState(state, { audioUrl, message, downloadName } = {}) {
+  function setAudioPlayerState(
+    state,
+    { audioUrl, message, downloadName } = {}
+  ) {
     resetCardClasses();
     downloadLink.classList.add("hidden");
 
@@ -97,7 +156,8 @@ function initializeTextToSpeechForm() {
         audioControls.load();
         audioCard.classList.add(...ENABLED_CLASSES);
         audioStatus.classList.add("text-sky-700", "dark:text-sky-300");
-        audioStatus.textContent = message || "Playback ready. Click play to listen.";
+        audioStatus.textContent =
+          message || "Playback ready. Click play to listen.";
         if (audioUrl) {
           downloadLink.href = audioUrl;
           downloadLink.download = downloadName || "generated_speech.wav";
@@ -118,9 +178,16 @@ function initializeTextToSpeechForm() {
         audioControls.disabled = true;
         audioControls.removeAttribute("src");
         audioControls.load();
-        audioCard.classList.add(...DISABLED_CLASSES, "border-red-500", "dark:border-red-400", "bg-red-50", "dark:bg-red-900/40");
+        audioCard.classList.add(
+          ...DISABLED_CLASSES,
+          "border-red-500",
+          "dark:border-red-400",
+          "bg-red-50",
+          "dark:bg-red-900/40"
+        );
         audioStatus.classList.add("text-red-600", "dark:text-red-300");
-        audioStatus.textContent = message || "Failed to generate audio. Please try again.";
+        audioStatus.textContent =
+          message || "Failed to generate audio. Please try again.";
         break;
       }
       case "disabled":
@@ -131,7 +198,8 @@ function initializeTextToSpeechForm() {
         audioCard.classList.add(...DISABLED_CLASSES);
         audioStatus.classList.add("text-gray-500", "dark:text-gray-400");
         audioStatus.textContent =
-          message || "Audio is currently disabled. Generate speech to enable playback.";
+          message ||
+          "Audio is currently disabled. Generate speech to enable playback.";
         break;
       }
     }
@@ -153,7 +221,9 @@ function initializeTextToSpeechForm() {
     const language = (languageSelect.value || "en").toLowerCase();
 
     if (!text) {
-      setAudioPlayerState("error", { message: "Please enter some text to synthesize." });
+      setAudioPlayerState("error", {
+        message: "Please enter some text to synthesize.",
+      });
       return;
     }
 
@@ -168,7 +238,11 @@ function initializeTextToSpeechForm() {
         speakerId: "default",
       });
 
-      const { audio_base64: audioBase64, duration_seconds: durationSeconds, sample_rate: sampleRate } = response;
+      const {
+        audio_base64: audioBase64,
+        duration_seconds: durationSeconds,
+        sample_rate: sampleRate,
+      } = response;
 
       if (!audioBase64) {
         throw new Error("No audio data returned from synthesis service.");
@@ -191,16 +265,21 @@ function initializeTextToSpeechForm() {
         message: infoParts.join(" • "),
         downloadName: `tts-${Date.now()}.wav`,
       });
+
+      backendApi.incrementApiUsage().catch((err) => {
+        console.error("incrementApiUsage failed:", err);
+      });
     } catch (error) {
       console.error("Failed to synthesize speech:", error);
-      const message = error?.message || "Failed to generate audio. Please try again.";
+      const message =
+        error?.message || "Failed to generate audio. Please try again.";
       setAudioPlayerState("error", { message });
     } finally {
       submitButton.disabled = false;
       submitButton.textContent = "Create Speech (Audio)";
     }
   });
-    window.addEventListener("beforeunload", () => {
+  window.addEventListener("beforeunload", () => {
     revokeCurrentUrl();
   });
 }

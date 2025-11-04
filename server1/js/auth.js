@@ -76,11 +76,3 @@ export function redirectIfAuthenticated(target = "home.html") {
     window.location.href = target;
   }
 }
-
-// Logout function - clears token and redirects to login
-export function logout() {
-  clearToken();
-  // Clear httpOnly cookie by making a logout request (optional)
-  // For now, just clear localStorage and redirect
-  window.location.href = "login.html";
-}

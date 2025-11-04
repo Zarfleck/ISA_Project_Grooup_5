@@ -3,7 +3,7 @@
 // - Calls placeholder /auth/login endpoint
 // - Stores token and redirects to home.html
 
-import { api } from "./apiClient.js";
+import { backendApi } from "./apiClient.js";
 import { setToken, redirectIfAuthenticated } from "./auth.js";
 
 // If user is already logged in, skip the page
@@ -25,7 +25,7 @@ async function handleLogin() {
 
     try {
       // Call placeholder login endpoint
-      const respond = await api.login(email, password);
+      const respond = await backendApi.login(email, password);
 
       if (respond.success) {
         const token = respond.token || respond.data?.token;
