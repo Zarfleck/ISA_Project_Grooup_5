@@ -4,6 +4,7 @@ voices/voices.json
 voices/*.wav
 generated/*.wav
 venv/
+venv310
 .venv/
 __pycache__/
 *.pyc
