@@ -248,7 +248,7 @@ adminRouter.get("/logout", (request, response) => {
 
 // Admin dashboard route
 adminRouter.get("/dashboard", requireAdminAuth, async (request, response) => {
-  const users = await db.getAllUsers();
+  const users = await db.getAllUsersWithApiUsage();
   response.render("admin-dashboard", {
     currentAdmin: response.locals.admin,
     users,
@@ -345,6 +345,9 @@ userRouter.post("/auth/login", async (request, response) => {
     const token = generateToken(user.user_id, user.email);
     setTokenCookie(response, token);
 
+    // Get API usage from user_api table
+    const apiUsage = await db.getUserApiUsage(user.user_id);
+
     return response.status(200).json({
       success: true,
       message: STRINGS.LOGIN.LOGIN_SUCCESS,
@@ -354,8 +357,8 @@ userRouter.post("/auth/login", async (request, response) => {
         email: user.email,
         firstName: user.first_name,
         lastName: user.last_name,
-        apiCallsUsed: user.api_calls_used,
-        apiCallsLimit: user.api_calls_limit,
+        apiCallsUsed: apiUsage.api_calls_used,
+        apiCallsLimit: apiUsage.api_calls_limit,
       },
     });
   } catch (error) {
@@ -379,6 +382,8 @@ userRouter.get("/auth/me", async (request, response) => {
     }
 
     const apiLimit = await db.checkApiLimit(user.user_id);
+    const apiUsage = await db.getUserApiUsage(user.user_id);
+    
     return response.status(200).json({
       success: true,
       user: {
@@ -386,8 +391,8 @@ userRouter.get("/auth/me", async (request, response) => {
         email: user.email,
         firstName: user.first_name,
         lastName: user.last_name,
-        apiCallsUsed: user.api_calls_used,
-        apiCallsLimit: user.api_calls_limit,
+        apiCallsUsed: apiUsage.api_calls_used,
+        apiCallsLimit: apiUsage.api_calls_limit,
         apiLimitExceeded: apiLimit.exceeded,
       },
     });
