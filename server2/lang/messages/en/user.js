@@ -17,14 +17,22 @@ const STRINGS = {
         first_name VARCHAR(100),
         last_name VARCHAR(100),
         is_admin BOOLEAN DEFAULT FALSE,
-        api_calls_used INT DEFAULT 0,
-        api_calls_limit INT DEFAULT 20,
         account_status ENUM('active', 'suspended') DEFAULT 'active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         last_login TIMESTAMP NULL,
         INDEX idx_email (email),
         INDEX idx_account_status (account_status)
+      ) ENGINE=InnoDB
+    `,
+
+    USER_API_TABLE: `
+      CREATE TABLE IF NOT EXISTS user_api (
+        user_id INT PRIMARY KEY,
+        api_calls_used INT DEFAULT 0,
+        api_calls_limit INT DEFAULT 20,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE
       ) ENGINE=InnoDB
     `,
 
