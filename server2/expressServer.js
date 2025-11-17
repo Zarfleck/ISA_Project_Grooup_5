@@ -262,6 +262,9 @@ async function handleLogin(request, response) {
     // Set httpOnly cookie
     setCookie(response, "token", token);
 
+    // Get API usage from user_api table
+    const apiUsage = await db.getUserApiUsage(user.user_id);
+
     response.writeHead(200);
     response.end(
       JSON.stringify({
@@ -273,8 +276,8 @@ async function handleLogin(request, response) {
           email: user.email,
           firstName: user.first_name,
           lastName: user.last_name,
-          apiCallsUsed: user.api_calls_used,
-          apiCallsLimit: user.api_calls_limit,
+          apiCallsUsed: apiUsage.api_calls_used,
+          apiCallsLimit: apiUsage.api_calls_limit,
         },
       })
     );
@@ -307,6 +310,7 @@ async function handleCurrentUser(request, response) {
 
     // Check API limit
     const apiLimit = await db.checkApiLimit(user.user_id);
+    const apiUsage = await db.getUserApiUsage(user.user_id);
 
     response.writeHead(200);
     response.end(
@@ -317,8 +321,8 @@ async function handleCurrentUser(request, response) {
           email: user.email,
           firstName: user.first_name,
           lastName: user.last_name,
-          apiCallsUsed: user.api_calls_used,
-          apiCallsLimit: user.api_calls_limit,
+          apiCallsUsed: apiUsage.api_calls_used,
+          apiCallsLimit: apiUsage.api_calls_limit,
           apiLimitExceeded: apiLimit.exceeded,
         },
       })
