@@ -52,6 +52,7 @@ class Database {
     try {
       // Create all Audio Book database tables
       await this.connection.execute(STRINGS.CREATE_TABLES_QUERIES.USER_TABLE);
+      await this.connection.execute(STRINGS.CREATE_TABLES_QUERIES.USER_API_TABLE);
       await this.connection.execute(STRINGS.CREATE_TABLES_QUERIES.VOICE_TABLE);
       await this.connection.execute(
         STRINGS.CREATE_TABLES_QUERIES.LANGUAGE_TABLE
@@ -86,6 +87,13 @@ class Database {
         "INSERT INTO user (email, password_hash, first_name, last_name, is_admin) VALUES (?, ?, ?, ?, ?)",
         [email, passwordHash, firstName, lastName, isAdmin]
       );
+      
+      // Create corresponding entry in user_api table
+      await this.connection.execute(
+        "INSERT INTO user_api (user_id, api_calls_used, api_calls_limit) VALUES (?, 0, 20)",
+        [result.insertId]
+      );
+      
       return {
         success: true,
         message: STRINGS.RESPONSES.SUCCESS_INSERT,
@@ -204,7 +212,7 @@ class Database {
   async getAllUsers() {
     try {
       const [rows] = await this.connection.execute(
-        "SELECT user_id, email, first_name, last_name, is_admin, api_calls_used, api_calls_limit, account_status, created_at, last_login FROM user"
+        "SELECT user_id, email, first_name, last_name, is_admin, account_status, created_at, last_login FROM user"
       );
       return rows;
     } catch (error) {
@@ -213,10 +221,26 @@ class Database {
     }
   }
 
+  async getAllUsersWithApiUsage() {
+    try {
+      const [rows] = await this.connection.execute(
+        `SELECT u.user_id, u.email, u.first_name, u.last_name, u.is_admin, u.account_status, u.created_at, u.last_login,
+                COALESCE(ua.api_calls_used, 0) as api_calls_used, 
+                COALESCE(ua.api_calls_limit, 20) as api_calls_limit
+         FROM user u
+         LEFT JOIN user_api ua ON u.user_id = ua.user_id`
+      );
+      return rows;
+    } catch (error) {
+      console.error("Get all users with API usage error:", error.message);
+      return [];
+    }
+  }
+
   async findUserByEmail(email) {
     try {
       const [rows] = await this.connection.execute(
-        "SELECT user_id, email, password_hash, first_name, last_name, is_admin, api_calls_used, api_calls_limit, account_status FROM user WHERE email = ?",
+        "SELECT user_id, email, password_hash, first_name, last_name, is_admin, account_status FROM user WHERE email = ?",
         [email]
       );
       return rows.length > 0 ? rows[0] : null;
@@ -229,13 +253,34 @@ class Database {
   async getUserById(userId) {
     try {
       const [rows] = await this.connection.execute(
-        "SELECT user_id, email, first_name, last_name, is_admin, api_calls_used, api_calls_limit, account_status FROM user WHERE user_id = ?",
+        "SELECT user_id, email, first_name, last_name, is_admin, account_status FROM user WHERE user_id = ?",
         [userId]
       );
       return rows.length > 0 ? rows[0] : null;
     } catch (error) {
       console.error("Get user by ID error:", error.message);
       return null;
+    }
+  }
+
+  async getUserApiUsage(userId) {
+    try {
+      const [rows] = await this.connection.execute(
+        "SELECT api_calls_used, api_calls_limit FROM user_api WHERE user_id = ?",
+        [userId]
+      );
+      if (rows.length === 0) {
+        // If no entry exists, create one with defaults
+        await this.connection.execute(
+          "INSERT INTO user_api (user_id, api_calls_used, api_calls_limit) VALUES (?, 0, 20)",
+          [userId]
+        );
+        return { api_calls_used: 0, api_calls_limit: 20 };
+      }
+      return rows[0];
+    } catch (error) {
+      console.error("Get user API usage error:", error.message);
+      return { api_calls_used: 0, api_calls_limit: 20 };
     }
   }
 
@@ -260,8 +305,23 @@ class Database {
 
   async incrementApiCalls(userId) {
     try {
+      // Ensure user_api entry exists
+      const [existing] = await this.connection.execute(
+        "SELECT user_id FROM user_api WHERE user_id = ?",
+        [userId]
+      );
+      
+      if (existing.length === 0) {
+        // Create entry if it doesn't exist
+        await this.connection.execute(
+          "INSERT INTO user_api (user_id, api_calls_used, api_calls_limit) VALUES (?, 0, 20)",
+          [userId]
+        );
+      }
+      
+      // Increment API calls in user_api table
       await this.connection.execute(
-        "UPDATE user SET api_calls_used = api_calls_used + 1 WHERE user_id = ?",
+        "UPDATE user_api SET api_calls_used = api_calls_used + 1 WHERE user_id = ?",
         [userId]
       );
       return true;
@@ -273,21 +333,15 @@ class Database {
 
   async checkApiLimit(userId) {
     try {
-      const [rows] = await this.connection.execute(
-        "SELECT api_calls_used, api_calls_limit FROM user WHERE user_id = ?",
-        [userId]
-      );
-      if (rows.length === 0) return { exceeded: false, used: 0, limit: 0 };
-
-      const { api_calls_used, api_calls_limit } = rows[0];
+      const apiUsage = await this.getUserApiUsage(userId);
       return {
-        exceeded: api_calls_used >= api_calls_limit,
-        used: api_calls_used,
-        limit: api_calls_limit,
+        exceeded: apiUsage.api_calls_used >= apiUsage.api_calls_limit,
+        used: apiUsage.api_calls_used,
+        limit: apiUsage.api_calls_limit,
       };
     } catch (error) {
       console.error("Check API limit error:", error.message);
-      return { exceeded: false, used: 0, limit: 0 };
+      return { exceeded: false, used: 0, limit: 20 };
     }
   }
 
