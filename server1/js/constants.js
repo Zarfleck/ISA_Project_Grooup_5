@@ -9,13 +9,13 @@ export const BACKEND_SERVER_URL =
 // export const BACKEND_SERVER_URL =
 //   "https://comp4537-self-be-yy4b3.ondigitalocean.app/api";
 
-// Base URL for the standalone AI (text-to-speech) microservice Cloudflare
-export const AI_SERVER_URL =
-  "https://whereas-containing-investigations-believe.trycloudflare.com/api/v1/tts";
-
-// // Base URL for the standalone AI (text-to-speech) microservice Ngrok (NOT WORKING)
+// // Base URL for the standalone AI (text-to-speech) microservice Cloudflare
 // export const AI_SERVER_URL =
-//   "https://effortless-bogus-kaelyn.ngrok-free.dev/api/v1/tts";
+//   "https://whereas-containing-investigations-believe.trycloudflare.com/api/v1/tts";
+
+// Base URL for the standalone AI (text-to-speech) microservice Ngrok (NOT WORKING)
+export const AI_SERVER_URL =
+  "https://effortless-bogus-kaelyn.ngrok-free.dev/api/v1/tts";
 
 const UI_STRINGS = {
   ERROR_UNAUTHORIZED:
