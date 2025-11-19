@@ -29,6 +29,11 @@ dotenv.config({ path: dirname(fileURLToPath(import.meta.url)) + "/.env" });
 
 const app = express();
 
+// Base URL for server3 TTS service. Override with AI_SERVER_URL/TTS_SERVER_URL env vars in deployment.
+const AI_SERVER_URL =
+  process.env.AI_SERVER_URL ||
+  "https://effortless-bogus-kaelyn.ngrok-free.dev/api/v1/tts";
+
 // Set EJS as the templating engine
 app.set("view engine", "ejs");
 app.set("views", path.join(process.cwd(), "views"));
@@ -42,7 +47,6 @@ app.use(
     origin: [
       "http://localhost:3000",
       "http://127.0.0.1:8080",
-      "https://4537fe.netlify.app",
       "https://isa-server1.netlify.app",
     ],
     credentials: true,
@@ -383,7 +387,7 @@ userRouter.get("/auth/me", async (request, response) => {
 
     const apiLimit = await db.checkApiLimit(user.user_id);
     const apiUsage = await db.getUserApiUsage(user.user_id);
-    
+
     return response.status(200).json({
       success: true,
       user: {
@@ -397,6 +401,115 @@ userRouter.get("/auth/me", async (request, response) => {
       },
     });
   } catch (error) {
+    return response.status(500).json({
+      success: false,
+      message: STRINGS.RESPONSES.ERROR_SERVER,
+      error: error.message,
+    });
+  }
+});
+
+// TTS proxy: authenticate, check quota, call server3, and persist usage
+userRouter.post("/tts/synthesize", async (request, response) => {
+  try {
+    const user = await authenticateRequest(request);
+    if (!user) {
+      return response.status(401).json({
+        success: false,
+        message: STRINGS.RESPONSES.ERROR_AUTHENTICATION,
+      });
+    }
+
+    const apiLimit = await db.checkApiLimit(user.user_id);
+    const apiUsage = {
+      used: apiLimit.used,
+      limit: apiLimit.limit,
+      remaining: Math.max(apiLimit.limit - apiLimit.used, 0),
+    };
+
+    if (apiLimit.exceeded) {
+      return response.status(429).json({
+        success: false,
+        message: STRINGS.RESPONSES.ERROR_API_LIMIT,
+        apiUsage,
+      });
+    }
+
+    const {
+      text,
+      language = "en",
+      speaker_id: speakerId = "default",
+      speaker_wav_base64: speakerWavBase64,
+      speaker_wav_url: speakerWavUrl,
+    } = request.body || {};
+
+    if (!text) {
+      return response.status(400).json({
+        success: false,
+        message: "Text is required to synthesize speech",
+        apiUsage,
+      });
+    }
+
+    if (!language) {
+      return response.status(400).json({
+        success: false,
+        message: "Language is required to synthesize speech",
+        apiUsage,
+      });
+    }
+
+    const aiResponse = await fetch(`${AI_SERVER_URL}/synthesize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text,
+        language: language,
+        speaker_id: speakerId,
+        speaker_wav_base64: speakerWavBase64,
+        speaker_wav_url: speakerWavUrl,
+      }),
+    });
+
+    let aiData;
+    try {
+      aiData = await aiResponse.json();
+    } catch (jsonError) {
+      console.error("Failed to parse AI response:", jsonError);
+      aiData = {};
+    }
+
+    if (!aiResponse.ok) {
+      return response.status(aiResponse.status).json({
+        success: false,
+        message:
+          aiData?.detail ||
+          aiData?.message ||
+          "Text-to-speech service returned an error",
+        apiUsage,
+      });
+    }
+
+    await db.incrementApiCalls(user.user_id);
+    await db.logApiUsage(user.user_id, "/tts/synthesize", "POST");
+
+    const updatedUsage = await db.getUserApiUsage(user.user_id);
+    const refreshedUsage = {
+      used: updatedUsage.api_calls_used,
+      limit: updatedUsage.api_calls_limit,
+      remaining: Math.max(
+        updatedUsage.api_calls_limit - updatedUsage.api_calls_used,
+        0
+      ),
+    };
+
+    return response.status(200).json({
+      success: true,
+      ...aiData,
+      apiUsage: refreshedUsage,
+    });
+  } catch (error) {
+    console.error("TTS proxy error:", error);
     return response.status(500).json({
       success: false,
       message: STRINGS.RESPONSES.ERROR_SERVER,
@@ -469,11 +582,8 @@ async function start() {
     process.exit(1);
   }
 
-  const port = process.env.PORT || process.env.SERVER_PORT || 3000;
-  const host = process.env.SERVER_HOST || "0.0.0.0";
-
-  app.listen(port, host, () => {
-    console.log(`${STRINGS.SERVER.STARTUP} ${port} on ${host}`);
+  app.listen(process.env.PORT, () => {
+    console.log(`${STRINGS.SERVER.STARTUP} ${process.env.PORT || 3000}`);
   });
 }
 

@@ -79,7 +79,10 @@ async function makeRequest(
 
   if (!respond.ok) {
     const message = data?.message || `Request failed (${respond.status})`;
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = respond.status;
+    error.data = data;
+    throw error;
   }
 
   // Check for API limit warning and show it
@@ -141,7 +144,7 @@ export const aiApi = {
       method: "POST",
       body: payload,
       baseUrl: AI_SERVER_URL,
-      credentials: "omit",
+      auth: true,
     });
   },
 };

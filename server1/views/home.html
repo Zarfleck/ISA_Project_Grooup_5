@@ -16,6 +16,12 @@
   <main class="flex h-[calc(100vh-7rem)] w-full justify-center items-center bg-white dark:bg-gray-900">
     <div class="py-6 px-4 mx-auto min-w-full lg:py-10">
       <div id="api-limit-warning" class="hidden"></div>
+      <div id="api-usage-container" class="hidden mb-2">
+        <div
+          class="bg-blue-50 border border-blue-200 text-blue-800 text-sm rounded-lg p-2 dark:bg-blue-900/40 dark:border-blue-800 dark:text-blue-100">
+          <span id="api-usage-text">Checking remaining calls...</span>
+        </div>
+      </div>
       <form id="text-to-speech-form">
         <div class="grid sm:grid-cols-2 md:grid-cols-4 sm:gap-6 md:gap-4">
           <div class="sm:col-span-1 md:col-span-2">
@@ -34,8 +40,7 @@
             <select id="language"
               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-sky-500 dark:focus:border-sky-500">
 
-              <option selected="">Select language</option>
-              <option value="en">English</option>
+              <option value="en" selected>English (default)</option>
               <option value="es">Spanish</option>
               <option value="fr">French</option>
               <option value="de">German</option>
@@ -57,7 +62,7 @@
           <div class="sm:col-span-2 md:col-span-4">
             <label for="text-to-convert"
               class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Text</label>
-            <textarea id="text-to-convert" rows="10"
+            <textarea id="text-to-convert" rows="8"
               class="block resize-none p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-sky-500 focus:border-sky-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-sky-500 dark:focus:border-sky-500"
               placeholder="Type your text here to convert to speech..."></textarea>
           </div>
@@ -68,7 +73,7 @@
         </button>
       </form>
 
-      <div id="audio-player-container" class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+      <div id="audio-player-container" class="mt-4 pt-2 border-t border-gray-200 dark:border-gray-700">
         <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Generated Audio Playback</h3>
 
         <!-- Audio Player Card: Initially set to DISABLED state classes -->

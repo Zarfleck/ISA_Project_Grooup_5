@@ -1,5 +1,13 @@
 .env
 server2/.env
 server2/node_modules
-server3/venv310
+
 server3/venv
+
+# ngrok server3 igonres
+server3/.venv310
+server3/__pycache__/
+server3/*.pyc
+server3/build.sh
+server3/requirments.txt
+server3/runtime.txt

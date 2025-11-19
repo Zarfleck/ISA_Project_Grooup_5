@@ -2,7 +2,7 @@
 // - Basic guard: if no token, redirect to login
 // - Fetch profile to verify token and check API limits
 
-import { requireAuth } from "./auth.js";
+import { requireAuth, clearToken } from "./auth.js";
 import {
   backendApi,
   aiApi,
@@ -10,6 +10,9 @@ import {
   hideApiLimitWarning,
 } from "./apiClient.js";
 import { base64WavToObjectUrl } from "./audio.js";
+
+let apiUsageState = null;
+
 
 requireAuth("login.html"); // Check if we have *any* token?
 
@@ -53,6 +56,58 @@ async function logout() {
   }
 }
 
+function normalizeApiUsage(usage) {
+  if (!usage) return null;
+  const used = usage.used ?? usage.apiCallsUsed ?? usage.api_calls_used;
+  const limit =
+    usage.limit ?? usage.apiCallsLimit ?? usage.api_calls_limit ?? 20;
+
+  if (used === undefined && limit === undefined) return null;
+
+  const usedNumber = Number.isFinite(Number(used)) ? Number(used) : 0;
+  const limitNumber = Number.isFinite(Number(limit)) ? Number(limit) : 20;
+
+  return {
+    used: usedNumber,
+    limit: limitNumber,
+    remaining: Math.max(limitNumber - usedNumber, 0),
+  };
+}
+
+function renderApiUsageBanner(rawUsage) {
+  const usage = normalizeApiUsage(rawUsage ?? apiUsageState);
+  apiUsageState = usage;
+
+  const usageContainer = document.getElementById("api-usage-container");
+  const usageText = document.getElementById("api-usage-text");
+  const submitButton = document.getElementById("create-speech-button");
+
+  if (!usageContainer || !usageText) return usage;
+
+  if (!usage) {
+    usageContainer.classList.add("hidden");
+    submitButton?.removeAttribute("disabled");
+    submitButton?.classList.remove("cursor-not-allowed", "opacity-50");
+    return usage;
+  }
+
+  usageContainer.classList.remove("hidden");
+  usageText.textContent = `${usage.remaining} of ${usage.limit} AI calls remaining (used ${usage.used})`;
+
+  if (usage.remaining <= 0) {
+    submitButton?.setAttribute("disabled", true);
+    submitButton?.classList.add("cursor-not-allowed", "opacity-50");
+    showApiLimitWarning();
+  } else {
+    submitButton?.removeAttribute("disabled");
+    submitButton?.classList.remove("cursor-not-allowed", "opacity-50");
+    hideApiLimitWarning();
+  }
+
+  return usage;
+}
+
+
 // Check user status and API limits on page load
 document.addEventListener("DOMContentLoaded", async () => {
   await checkCurrentUser();
@@ -62,10 +117,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function checkCurrentUser() {
   try {
     const currentUser = await backendApi.currentUser();
+    const usage = renderApiUsageBanner(currentUser.user);
     if (
       currentUser.success &&
       currentUser.user &&
-      currentUser.user.apiLimitExceeded
+      (currentUser.user.apiLimitExceeded || usage?.remaining <= 0)
     ) {
       showApiLimitWarning();
     } else {
@@ -85,6 +141,9 @@ function initializeTextToSpeechForm() {
   const audioControls = document.getElementById("audio-player-controls");
   const audioStatus = document.getElementById("audio-status");
   const downloadLink = document.getElementById("download-link");
+
+  // Re-render usage banner now that DOM refs exist
+  renderApiUsageBanner();
 
   if (
     !form ||
@@ -218,7 +277,18 @@ function initializeTextToSpeechForm() {
     event.preventDefault();
 
     const text = textInput.value.trim();
-    const language = (languageSelect.value || "en").toLowerCase();
+    const language = languageSelect.value.trim().toLowerCase();
+
+    if (
+      apiUsageState?.remaining !== undefined &&
+      apiUsageState.remaining <= 0
+    ) {
+      showApiLimitWarning();
+      setAudioPlayerState("error", {
+        message: "You have reached your API call limit.",
+      });
+      return;
+    }
 
     if (!text) {
       setAudioPlayerState("error", {
@@ -242,7 +312,12 @@ function initializeTextToSpeechForm() {
         audio_base64: audioBase64,
         duration_seconds: durationSeconds,
         sample_rate: sampleRate,
+        apiUsage,
       } = response;
+
+      if (apiUsage) {
+        renderApiUsageBanner(apiUsage);
+      }
 
       if (!audioBase64) {
         throw new Error("No audio data returned from synthesis service.");
@@ -252,30 +327,24 @@ function initializeTextToSpeechForm() {
       revokeCurrentUrl();
       currentObjectUrl = objectUrl;
 
-      const infoParts = ["Playback ready. Click play to listen."];
-      if (durationSeconds) {
-        infoParts.push(`~${durationSeconds.toFixed(1)}s`);
-      }
-      if (sampleRate) {
-        infoParts.push(`${sampleRate} Hz`);
-      }
-
       setAudioPlayerState("ready", {
         audioUrl: objectUrl,
-        message: infoParts.join(" • "),
+        message: "Playback ready. Click play to listen.",
         downloadName: `tts-${Date.now()}.wav`,
-      });
-
-      backendApi.incrementApiUsage().catch((err) => {
-        console.error("incrementApiUsage failed:", err);
       });
     } catch (error) {
       console.error("Failed to synthesize speech:", error);
       const message =
         error?.message || "Failed to generate audio. Please try again.";
       setAudioPlayerState("error", { message });
+      if (error?.data?.apiUsage) {
+        renderApiUsageBanner(error.data.apiUsage);
+      }
+      if (error?.status === 429) {
+        showApiLimitWarning();
+      }
     } finally {
-      submitButton.disabled = false;
+      submitButton.disabled = apiUsageState?.remaining <= 0;
       submitButton.textContent = "Create Speech (Audio)";
     }
   });
