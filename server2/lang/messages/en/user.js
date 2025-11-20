@@ -14,8 +14,6 @@ const STRINGS = {
         user_id INT AUTO_INCREMENT PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
-        first_name VARCHAR(100),
-        last_name VARCHAR(100),
         is_admin BOOLEAN DEFAULT FALSE,
         account_status ENUM('active', 'suspended') DEFAULT 'active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -36,63 +34,12 @@ const STRINGS = {
       ) ENGINE=InnoDB
     `,
 
-    VOICE_TABLE: `
-      CREATE TABLE IF NOT EXISTS voice (
-        voice_id INT AUTO_INCREMENT PRIMARY KEY,
-        voice_name VARCHAR(100) NOT NULL,
-        voice_code VARCHAR(50) UNIQUE NOT NULL,
-        description TEXT,
-        is_active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_voice_code (voice_code),
-        INDEX idx_is_active (is_active)
-      ) ENGINE=InnoDB
-    `,
-
     LANGUAGE_TABLE: `
       CREATE TABLE IF NOT EXISTS language (
         language_id INT AUTO_INCREMENT PRIMARY KEY,
         language_name VARCHAR(100) NOT NULL,
         language_code VARCHAR(10) UNIQUE NOT NULL,
-        is_active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_language_code (language_code),
-        INDEX idx_is_active (is_active)
-      ) ENGINE=InnoDB
-    `,
-
-    AUDIO_GENERATION_TABLE: `
-      CREATE TABLE IF NOT EXISTS audio_generation (
-        generation_id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        text_content TEXT NOT NULL,
-        voice_id INT NOT NULL,
-        language_id INT NOT NULL,
-        audio_file_path VARCHAR(500),
-        generation_status ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
-        error_message TEXT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        completed_at TIMESTAMP NULL,
-        INDEX idx_user_id (user_id),
-        INDEX idx_generation_status (generation_status),
-        INDEX idx_created_at (created_at),
-        FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE,
-        FOREIGN KEY (voice_id) REFERENCES voice(voice_id),
-        FOREIGN KEY (language_id) REFERENCES language(language_id)
-      ) ENGINE=InnoDB
-    `,
-
-    USER_PREFERENCE_TABLE: `
-      CREATE TABLE IF NOT EXISTS user_preference (
-        preference_id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT UNIQUE NOT NULL,
-        default_voice_id INT,
-        default_language_id INT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE,
-        FOREIGN KEY (default_voice_id) REFERENCES voice(voice_id),
-        FOREIGN KEY (default_language_id) REFERENCES language(language_id)
+        INDEX idx_language_code (language_code)
       ) ENGINE=InnoDB
     `,
 
@@ -117,33 +64,11 @@ const STRINGS = {
       email: "john@john.com",
       password: "123",
       is_admin: false,
-      first_name: "John",
-      last_name: "Doe",
     },
     {
       email: "admin@admin.com",
       password: "111",
       is_admin: true,
-      first_name: "Admin",
-      last_name: "User",
-    },
-  ],
-
-  DEFAULT_VOICES: [
-    {
-      voice_name: "Natural Female",
-      voice_code: "female_natural",
-      description: "Clear and natural female voice",
-    },
-    {
-      voice_name: "Professional Male",
-      voice_code: "male_professional",
-      description: "Professional male voice for business content",
-    },
-    {
-      voice_name: "Neutral Voice",
-      voice_code: "neutral_standard",
-      description: "Gender-neutral voice option",
     },
   ],
 
@@ -151,6 +76,20 @@ const STRINGS = {
     { language_name: "English", language_code: "en" },
     { language_name: "Spanish", language_code: "es" },
     { language_name: "French", language_code: "fr" },
+    { language_name: "German", language_code: "de" },
+    { language_name: "Italian", language_code: "it" },
+    { language_name: "Portuguese", language_code: "pt" },
+    { language_name: "Polish", language_code: "pl" },
+    { language_name: "Turkish", language_code: "tr" },
+    { language_name: "Russian", language_code: "ru" },
+    { language_name: "Dutch", language_code: "nl" },
+    { language_name: "Czech", language_code: "cs" },
+    { language_name: "Arabic", language_code: "ar" },
+    { language_name: "Chinese", language_code: "zh-cn" },
+    { language_name: "Japanese", language_code: "ja" },
+    { language_name: "Hungarian", language_code: "hu" },
+    { language_name: "Korean", language_code: "ko" },
+    { language_name: "Hindi", language_code: "hi" },
   ],
 
   // HTTP Response Messages

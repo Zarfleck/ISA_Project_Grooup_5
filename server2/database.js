@@ -40,6 +40,7 @@ class Database {
 
       console.log(STRINGS.SERVER.DB_CONNECTED);
       await this.createTable();
+      await this.insertDefaultData();
       return true;
     } catch (error) {
       console.error(STRINGS.SERVER.DB_ERROR, error.message);
@@ -52,17 +53,15 @@ class Database {
     try {
       // Create all Audio Book database tables
       await this.connection.execute(STRINGS.CREATE_TABLES_QUERIES.USER_TABLE);
-      await this.connection.execute(STRINGS.CREATE_TABLES_QUERIES.USER_API_TABLE);
-      await this.connection.execute(STRINGS.CREATE_TABLES_QUERIES.VOICE_TABLE);
+      await this.connection.execute(
+        STRINGS.CREATE_TABLES_QUERIES.USER_API_TABLE
+      );
       await this.connection.execute(
         STRINGS.CREATE_TABLES_QUERIES.LANGUAGE_TABLE
       );
-      await this.connection.execute(
-        STRINGS.CREATE_TABLES_QUERIES.AUDIO_GENERATION_TABLE
-      );
-      await this.connection.execute(
-        STRINGS.CREATE_TABLES_QUERIES.USER_PREFERENCE_TABLE
-      );
+      // await this.connection.execute(
+      //   STRINGS.CREATE_TABLES_QUERIES.AUDIO_GENERATION_TABLE
+      // );
       await this.connection.execute(
         STRINGS.CREATE_TABLES_QUERIES.API_USAGE_LOG_TABLE
       );
@@ -75,25 +74,19 @@ class Database {
   }
 
   // This block of code below was assisted by Claude Sonnet 4 (https://claude.ai/)
-  async insertUser(
-    email,
-    passwordHash,
-    firstName = null,
-    lastName = null,
-    isAdmin = false
-  ) {
+  async insertUser(email, passwordHash, isAdmin = false) {
     try {
       const [result] = await this.connection.execute(
-        "INSERT INTO user (email, password_hash, first_name, last_name, is_admin) VALUES (?, ?, ?, ?, ?)",
-        [email, passwordHash, firstName, lastName, isAdmin]
+        "INSERT INTO user (email, password_hash, is_admin) VALUES (?, ?, ?)",
+        [email, passwordHash, isAdmin]
       );
-      
+
       // Create corresponding entry in user_api table
       await this.connection.execute(
         "INSERT INTO user_api (user_id, api_calls_used, api_calls_limit) VALUES (?, 0, 20)",
         [result.insertId]
       );
-      
+
       return {
         success: true,
         message: STRINGS.RESPONSES.SUCCESS_INSERT,
@@ -119,41 +112,41 @@ class Database {
 
   async insertDefaultData() {
     try {
-      const results = { users: [], voices: [], languages: [] };
+      const results = { users: [], languages: [] };
 
       // Insert default users
-      for (const user of STRINGS.DEFAULT_USERS) {
-        const result = await this.insertUser(
-          user.email,
-          user.password, // Note: In production, this should be hashed
-          user.first_name,
-          user.last_name,
-          user.is_admin
-        );
-        results.users.push(result);
-      }
-
-      // Insert default voices
-      for (const voice of STRINGS.DEFAULT_VOICES) {
-        const [result] = await this.connection.execute(
-          "INSERT INTO voice (voice_name, voice_code, description) VALUES (?, ?, ?)",
-          [voice.voice_name, voice.voice_code, voice.description]
-        );
-        results.voices.push({ success: true, insertId: result.insertId });
+      const [[{ count: userCount }]] = await this.connection.execute(
+        "SELECT COUNT(*) as count FROM user"
+      );
+      if (userCount === 0) {
+        for (const user of STRINGS.DEFAULT_USERS) {
+          const hashedPassword = await this.hashPassword(user.password);
+          const result = await this.insertUser(
+            user.email,
+            hashedPassword,
+            user.is_admin || false
+          );
+          results.users.push(result);
+        }
       }
 
       // Insert default languages
-      for (const language of STRINGS.DEFAULT_LANGUAGES) {
-        const [result] = await this.connection.execute(
-          "INSERT INTO language (language_name, language_code) VALUES (?, ?)",
-          [language.language_name, language.language_code]
-        );
-        results.languages.push({ success: true, insertId: result.insertId });
+      const [[{ count: languageCount }]] = await this.connection.execute(
+        "SELECT COUNT(*) as count FROM language"
+      );
+      if (languageCount === 0) {
+        for (const language of STRINGS.DEFAULT_LANGUAGES) {
+          const [result] = await this.connection.execute(
+            "INSERT INTO language (language_name, language_code) VALUES (?, ?)",
+            [language.language_name, language.language_code]
+          );
+          results.languages.push({ success: true, insertId: result.insertId });
+        }
       }
 
       return {
         success: true,
-        message: `Inserted default data: ${results.users.length} users, ${results.voices.length} voices, ${results.languages.length} languages`,
+        message: `Inserted default data: ${results.users.length} users, ${results.languages.length} languages`,
         results: results,
       };
     } catch (error) {
@@ -212,7 +205,7 @@ class Database {
   async getAllUsers() {
     try {
       const [rows] = await this.connection.execute(
-        "SELECT user_id, email, first_name, last_name, is_admin, account_status, created_at, last_login FROM user"
+        "SELECT user_id, email, is_admin, account_status, created_at, last_login FROM user"
       );
       return rows;
     } catch (error) {
@@ -224,7 +217,7 @@ class Database {
   async getAllUsersWithApiUsage() {
     try {
       const [rows] = await this.connection.execute(
-        `SELECT u.user_id, u.email, u.first_name, u.last_name, u.is_admin, u.account_status, u.created_at, u.last_login,
+        `SELECT u.user_id, u.email, u.is_admin, u.account_status, u.created_at, u.last_login,
                 COALESCE(ua.api_calls_used, 0) as api_calls_used, 
                 COALESCE(ua.api_calls_limit, 20) as api_calls_limit
          FROM user u
@@ -240,7 +233,7 @@ class Database {
   async findUserByEmail(email) {
     try {
       const [rows] = await this.connection.execute(
-        "SELECT user_id, email, password_hash, first_name, last_name, is_admin, account_status FROM user WHERE email = ?",
+        "SELECT user_id, email, password_hash, is_admin, account_status FROM user WHERE email = ?",
         [email]
       );
       return rows.length > 0 ? rows[0] : null;
@@ -253,7 +246,7 @@ class Database {
   async getUserById(userId) {
     try {
       const [rows] = await this.connection.execute(
-        "SELECT user_id, email, first_name, last_name, is_admin, account_status FROM user WHERE user_id = ?",
+        "SELECT user_id, email, is_admin, account_status FROM user WHERE user_id = ?",
         [userId]
       );
       return rows.length > 0 ? rows[0] : null;
@@ -310,7 +303,7 @@ class Database {
         "SELECT user_id FROM user_api WHERE user_id = ?",
         [userId]
       );
-      
+
       if (existing.length === 0) {
         // Create entry if it doesn't exist
         await this.connection.execute(
@@ -318,7 +311,7 @@ class Database {
           [userId]
         );
       }
-      
+
       // Increment API calls in user_api table
       await this.connection.execute(
         "UPDATE user_api SET api_calls_used = api_calls_used + 1 WHERE user_id = ?",

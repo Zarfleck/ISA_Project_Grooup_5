@@ -111,8 +111,6 @@ export async function requireAdminAuth(request, response, next) {
     // Make admin info available in views
     response.locals.admin = {
       email: user.email,
-      firstName: user.first_name || "",
-      lastName: user.last_name || "",
     };
 
     request.admin = user; // for backend access
@@ -173,8 +171,6 @@ adminRouter.post("/login", async (request, response) => {
       user: {
         userId: user.user_id,
         email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
       },
     });
   } catch (error) {
@@ -197,7 +193,7 @@ adminRouter.get("/add-admin", (request, response) => {
 
 adminRouter.post("/add-admin", async (request, response) => {
   try {
-    const { email, password, firstName, lastName } = request.body || {};
+    const { email, password } = request.body || {};
 
     if (!email || !password) {
       return response
@@ -214,13 +210,7 @@ adminRouter.post("/add-admin", async (request, response) => {
     }
 
     const passwordHash = await db.hashPassword(password);
-    const result = await db.insertUser(
-      email,
-      passwordHash,
-      firstName || null,
-      lastName || null,
-      true
-    );
+    const result = await db.insertUser(email, passwordHash, true);
 
     if (!result?.success) {
       return response.status(400).json(result);
@@ -270,7 +260,7 @@ const userRouter = express.Router();
 // Signup route
 userRouter.post("/auth/signup", async (request, response) => {
   try {
-    const { email, password, firstName, lastName } = request.body || {};
+    const { email, password } = request.body || {};
 
     if (!email || !password) {
       return response
@@ -289,12 +279,7 @@ userRouter.post("/auth/signup", async (request, response) => {
     // Hash password and create user
 
     const passwordHash = await db.hashPassword(password);
-    const result = await db.insertUser(
-      email,
-      passwordHash,
-      firstName || null,
-      lastName || null
-    );
+    const result = await db.insertUser(email, passwordHash);
 
     if (!result?.success) {
       return response.status(400).json(result);
@@ -359,8 +344,6 @@ userRouter.post("/auth/login", async (request, response) => {
       user: {
         userId: user.user_id,
         email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
         apiCallsUsed: apiUsage.api_calls_used,
         apiCallsLimit: apiUsage.api_calls_limit,
       },
@@ -393,8 +376,6 @@ userRouter.get("/auth/me", async (request, response) => {
       user: {
         userId: user.user_id,
         email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
         apiCallsUsed: apiUsage.api_calls_used,
         apiCallsLimit: apiUsage.api_calls_limit,
         apiLimitExceeded: apiLimit.exceeded,
