@@ -3,40 +3,27 @@
 const TOKEN_KEY = "auth_token";
 const EMAIL_KEY = "auth_email"; // Used through the password reset flow
 const RESET_CODE_KEY = "auth_reset_code";
+const SESSION_FLAG_KEY = "auth_session";
 
-// get/set/clear auth token in localStorage
+// get/set/clear auth session flag (JWT stays in httpOnly cookie; do not store tokens client-side)
 export function setToken(token) {
-  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.removeItem(TOKEN_KEY); // ensure legacy token is cleared
+  sessionStorage.setItem(SESSION_FLAG_KEY, "1");
 }
 
 export function getToken() {
-  let token = localStorage.getItem(TOKEN_KEY);
-
-  // If not in localStorage, try to get from cookies
-  if (!token) {
-    const cookies = document.cookie.split(";");
-    for (let cookie of cookies) {
-      const [name, value] = cookie.trim().split("=");
-      if (name === "token") {
-        token = value;
-        setToken(token); // Save to localStorage for future use
-        break;
-      }
-    }
-  }
-
-  return token;
+  // JWT is stored as httpOnly cookie; do not expose to JS
+  return null;
 }
 
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(SESSION_FLAG_KEY);
 }
 
 // Check if user is authenticated
-// Note: httpOnly cookies cannot be read by JavaScript, so we check localStorage
-// The server will verify via cookies automatically, but for client-side checks we use localStorage
 export function isAuthenticated() {
-  return !!getToken();
+  return sessionStorage.getItem(SESSION_FLAG_KEY) === "1";
 }
 
 // Save/get email used in password reset flow

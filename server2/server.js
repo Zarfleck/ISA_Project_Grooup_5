@@ -41,16 +41,23 @@ app.set("views", path.join(process.cwd(), "views"));
 app.use(express.json());
 app.use(cookieParser());
 
+// Trust proxy is required for Secure cookies behind load balancers
+app.set("trust proxy", 1);
+
 // CORS setup that reflects origin and supports credentials
+const allowedOrigins =
+  process.env.ALLOWED_ORIGINS?.split(",").map((o) => o.trim()).filter(Boolean) || [];
+const defaultOrigins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:8080",
+  "https://isa-server1.netlify.app",
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "http://127.0.0.1:8080",
-      "https://isa-server1.netlify.app",
-    ],
+    origin: allowedOrigins.length > 0 ? allowedOrigins : defaultOrigins,
     credentials: true,
-    methods: ["GET", "POST", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
@@ -64,8 +71,8 @@ const db = new Database();
 function setTokenCookie(response, token) {
   const cookieOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "Lax",
+    secure: true,
+    sameSite: "None",
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/",
   };
@@ -167,7 +174,6 @@ adminRouter.post("/login", async (request, response) => {
     return response.status(200).json({
       success: true,
       message: STRINGS.LOGIN.LOGIN_SUCCESS,
-      token,
       user: {
         userId: user.user_id,
         email: user.email,
@@ -234,8 +240,9 @@ adminRouter.post("/add-admin", async (request, response) => {
 adminRouter.get("/logout", (request, response) => {
   response.clearCookie("token", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "Lax",
+    secure: true,
+    sameSite: "None",
+    path: "/",
   });
   response.redirect("/admin/login");
 });
@@ -291,7 +298,6 @@ userRouter.post("/auth/signup", async (request, response) => {
     return response.status(200).json({
       success: true,
       message: STRINGS.SIGNUP.USER_REGISTERED,
-      token,
       userId: result.userId,
     });
   } catch (error) {
@@ -340,7 +346,6 @@ userRouter.post("/auth/login", async (request, response) => {
     return response.status(200).json({
       success: true,
       message: STRINGS.LOGIN.LOGIN_SUCCESS,
-      token,
       user: {
         userId: user.user_id,
         email: user.email,
@@ -504,8 +509,8 @@ userRouter.post("/auth/logout", (request, response) => {
   try {
     response.clearCookie("token", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Lax",
+      secure: true,
+      sameSite: "None",
       path: "/",
     });
 

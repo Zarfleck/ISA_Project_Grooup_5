@@ -22,18 +22,17 @@ logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="XTTS Speech Service", version="1.0.0")
 
-allow_origins = os.getenv("XTTS_ALLOW_ORIGINS", "*")
-if allow_origins.strip() == "*":
-    origins = ["*"]
-else:
-    origins = [origin.strip() for origin in allow_origins.split(",") if origin.strip()]
+raw_origins = os.getenv("XTTS_ALLOW_ORIGINS", "").split(",")
+origins = [origin.strip() for origin in raw_origins if origin.strip()]
+if not origins:
+    origins = ["http://localhost:3000", "http://127.0.0.1:8080", "https://comp4537-group5-9lwth.ondigitalocean.app"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"]
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 voices_dir = Path(os.getenv("XTTS_VOICE_DIR", Path(__file__).resolve().parent / "voices"))
@@ -60,8 +59,10 @@ class VoiceRegistrationRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_source(self):
-        if not (self.speaker_wav_base64 or self.speaker_wav_url):
-            raise ValueError("Provide either speaker_wav_base64 or speaker_wav_url")
+        if self.speaker_wav_url:
+            raise ValueError("speaker_wav_url is disabled; use speaker_wav_base64 instead")
+        if not self.speaker_wav_base64:
+            raise ValueError("Provide speaker_wav_base64")
         return self
 
 
@@ -81,8 +82,10 @@ class SynthesizeRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_reference(self):
-        if not (self.speaker_wav_base64 or self.speaker_wav_url or self.speaker_id):
-            raise ValueError("Provide a speaker_id or supply a reference clip")
+        if self.speaker_wav_url:
+            raise ValueError("speaker_wav_url is disabled; use speaker_wav_base64 or speaker_id")
+        if not (self.speaker_wav_base64 or self.speaker_id):
+            raise ValueError("Provide speaker_wav_base64 or speaker_id")
         return self
 
 
@@ -128,8 +131,6 @@ def register_voice(payload: VoiceRegistrationRequest = Body(...)) -> VoiceRegist
     try:
         if payload.speaker_wav_base64:
             temp_file = _base64_to_temp(payload.speaker_wav_base64)
-        elif payload.speaker_wav_url:
-            temp_file = _download_to_temp(payload.speaker_wav_url)
         else:
             raise HTTPException(status_code=400, detail="No voice source provided")
 
@@ -157,9 +158,6 @@ async def synthesize(payload: SynthesizeRequest = Body(...)) -> SynthesizeRespon
     try:
         if payload.speaker_wav_base64:
             speaker_path = _base64_to_temp(payload.speaker_wav_base64)
-            temp_files.append(speaker_path)
-        elif payload.speaker_wav_url:
-            speaker_path = _download_to_temp(payload.speaker_wav_url)
             temp_files.append(speaker_path)
         elif payload.speaker_id:
             speaker_path = registry.get_voice_path(payload.speaker_id)
@@ -224,15 +222,7 @@ def _base64_to_temp(b64_data: str) -> Path:
 
 
 def _download_to_temp(url: AnyHttpUrl) -> Path:
-    try:
-        response = requests.get(str(url), timeout=30)
-        response.raise_for_status()
-    except requests.RequestException as exc:  # pragma: no cover - network guard
-        raise HTTPException(status_code=400, detail=f"Unable to download voice sample: {exc}") from exc
-
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as handle:
-        handle.write(response.content)
-        return Path(handle.name)
+    raise HTTPException(status_code=400, detail="speaker_wav_url is disabled; provide base64 audio instead")
 
 
 @app.on_event("startup")
