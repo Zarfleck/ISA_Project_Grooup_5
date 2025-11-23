@@ -42,7 +42,7 @@ signupForm?.addEventListener("submit", async (e) => {
       messageDiv.innerHTML = `<div class="p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900 dark:text-red-400 rounded-lg" role="alert">Error: ${respond.message}</div>`;
     }
   } catch (error) {
-    messageDiv.innerHTML = `<div class="p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900 dark:text-red-400 rounded-lg" role="alert">Network error: Could not connect to the server.</div>`;
+    messageDiv.innerHTML = `<div class="p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900 dark:text-red-400 rounded-lg" role="alert">${error}</div>`;
     console.error("Registration error:", error);
   } finally {
     if (submitBtn) submitBtn.disabled = false;

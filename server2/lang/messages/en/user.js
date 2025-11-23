@@ -47,13 +47,15 @@ const STRINGS = {
       CREATE TABLE IF NOT EXISTS api_usage_log (
         log_id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
+        language_id INT NOT NULL,
         endpoint VARCHAR(255) NOT NULL,
         method VARCHAR(10) NOT NULL,
         request_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_user_id (user_id),
         INDEX idx_request_timestamp (request_timestamp),
         INDEX idx_endpoint (endpoint),
-        FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE
+        FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (language_id) REFERENCES language(language_id) ON DELETE CASCADE
       ) ENGINE=InnoDB
     `,
   },

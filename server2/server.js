@@ -477,7 +477,7 @@ userRouter.post("/tts/synthesize", async (request, response) => {
     }
 
     await db.incrementApiCalls(user.user_id);
-    await db.logApiUsage(user.user_id, "/tts/synthesize", "POST");
+    await db.logApiUsage(user.user_id, "/tts/synthesize", "POST", language);
 
     const updatedUsage = await db.getUserApiUsage(user.user_id);
     const refreshedUsage = {

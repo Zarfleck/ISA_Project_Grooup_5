@@ -13,7 +13,6 @@ import { base64WavToObjectUrl } from "./audio.js";
 
 let apiUsageState = null;
 
-
 requireAuth("login.html"); // Check if we have *any* token?
 
 // Listen to the header inclusion event and attach logout handler
@@ -92,7 +91,7 @@ function renderApiUsageBanner(rawUsage) {
   }
 
   usageContainer.classList.remove("hidden");
-  usageText.textContent = `${usage.remaining} of ${usage.limit} AI calls remaining (used ${usage.used})`;
+  usageText.textContent = `used ${usage.used} of ${usage.limit} AI API calls used. (${usage.remaining} remaining)`;
 
   if (usage.remaining <= 0) {
     submitButton?.setAttribute("disabled", true);
@@ -106,7 +105,6 @@ function renderApiUsageBanner(rawUsage) {
 
   return usage;
 }
-
 
 // Check user status and API limits on page load
 document.addEventListener("DOMContentLoaded", async () => {

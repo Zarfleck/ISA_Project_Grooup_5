@@ -158,6 +158,28 @@ class Database {
     }
   }
 
+  async getLanguageIdByCode(languageCode) {
+    if (!languageCode) return null;
+
+    try {
+      const normalizedCode = String(languageCode).trim().toLowerCase();
+      const [rows] = await this.connection.execute(
+        "SELECT language_id FROM language WHERE LOWER(language_code) = ? LIMIT 1",
+        [normalizedCode]
+      );
+
+      if (rows.length === 0) {
+        console.warn(`Language code not found: ${languageCode}`);
+        return null;
+      }
+
+      return rows[0].language_id;
+    } catch (error) {
+      console.error("Get language ID error:", error.message);
+      return null;
+    }
+  }
+
   // This block of code below was assisted by Claude Sonnet 4 (https://claude.ai/)
   isQuerySafe(query) {
     const upperQuery = query.toUpperCase().trim();
@@ -338,11 +360,19 @@ class Database {
     }
   }
 
-  async logApiUsage(userId, endpoint, method) {
+  async logApiUsage(userId, endpoint, method, languageCode) {
     try {
+      const languageId = await this.getLanguageIdByCode(languageCode);
+      if (!languageId) {
+        console.warn(
+          `Skipping API usage log due to missing language ID for code: ${languageCode}`
+        );
+        return false;
+      }
+
       await this.connection.execute(
-        "INSERT INTO api_usage_log (user_id, endpoint, method) VALUES (?, ?, ?)",
-        [userId, endpoint, method]
+        "INSERT INTO api_usage_log (user_id, language_id, endpoint, method) VALUES (?, ?, ?, ?)",
+        [userId, languageId, endpoint, method]
       );
       return true;
     } catch (error) {
