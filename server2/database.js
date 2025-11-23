@@ -53,15 +53,10 @@ class Database {
     try {
       // Create all Audio Book database tables
       await this.connection.execute(STRINGS.CREATE_TABLES_QUERIES.USER_TABLE);
+      await this.connection.execute(STRINGS.CREATE_TABLES_QUERIES.USER_API_TABLE);
       await this.connection.execute(
         STRINGS.CREATE_TABLES_QUERIES.USER_API_TABLE
       );
-      await this.connection.execute(
-        STRINGS.CREATE_TABLES_QUERIES.LANGUAGE_TABLE
-      );
-      // await this.connection.execute(
-      //   STRINGS.CREATE_TABLES_QUERIES.AUDIO_GENERATION_TABLE
-      // );
       await this.connection.execute(
         STRINGS.CREATE_TABLES_QUERIES.API_USAGE_LOG_TABLE
       );
@@ -74,7 +69,11 @@ class Database {
   }
 
   // This block of code below was assisted by Claude Sonnet 4 (https://claude.ai/)
-  async insertUser(email, passwordHash, isAdmin = false) {
+  async insertUser(
+    email,
+    passwordHash,
+    isAdmin = false
+  ) {
     try {
       const [result] = await this.connection.execute(
         "INSERT INTO user (email, password_hash, is_admin) VALUES (?, ?, ?)",
@@ -115,19 +114,13 @@ class Database {
       const results = { users: [], languages: [] };
 
       // Insert default users
-      const [[{ count: userCount }]] = await this.connection.execute(
-        "SELECT COUNT(*) as count FROM user"
-      );
-      if (userCount === 0) {
-        for (const user of STRINGS.DEFAULT_USERS) {
-          const hashedPassword = await this.hashPassword(user.password);
-          const result = await this.insertUser(
-            user.email,
-            hashedPassword,
-            user.is_admin || false
-          );
-          results.users.push(result);
-        }
+      for (const user of STRINGS.DEFAULT_USERS) {
+        const result = await this.insertUser(
+          user.email,
+          user.password, // Note: In production, this should be hashed
+          user.is_admin
+        );
+        results.users.push(result);
       }
 
       // Insert default languages
