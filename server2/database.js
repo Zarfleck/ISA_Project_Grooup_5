@@ -398,6 +398,37 @@ class Database {
     }
   }
 
+  async switchToUserRole() {
+    try {
+      await this.connection.execute("SET ROLE 'audio_book_user'");
+      console.log('Switched to user role');
+    } catch (error) {
+      console.error('Error switching to user role:', error.message);
+      throw error;
+    }
+  }
+
+  // Admin operation methods
+  async deleteUser(userId) {
+    try {
+      const [result] = await this.connection.execute(
+        "DELETE FROM user WHERE user_id = ?",
+        [userId]
+      );
+      return {
+        success: true,
+        message: "User deleted successfully",
+        affectedRows: result.affectedRows
+      };
+    } catch (error) {
+      console.error('Delete user error:', error.message);
+      return {
+        success: false,
+        message: "Failed to delete user",
+        error: error.message
+      };
+    }
+  }
 
   async close() {
     if (this.connection) {
