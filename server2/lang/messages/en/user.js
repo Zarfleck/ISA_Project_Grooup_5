@@ -14,8 +14,6 @@ const STRINGS = {
         user_id INT AUTO_INCREMENT PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
-        first_name VARCHAR(100),
-        last_name VARCHAR(100),
         is_admin BOOLEAN DEFAULT FALSE,
         account_status ENUM('active', 'suspended') DEFAULT 'active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -23,7 +21,16 @@ const STRINGS = {
         last_login TIMESTAMP NULL,
         INDEX idx_email (email),
         INDEX idx_account_status (account_status)
-      ) ENGINE=InnoDB
+      ) ENGINE=InnoDB;
+    `,
+
+    LANGUAGE_TABLE: `
+      CREATE TABLE IF NOT EXISTS language (
+        language_id INT AUTO_INCREMENT PRIMARY KEY,
+        language_name VARCHAR(100) NOT NULL,
+        language_code VARCHAR(10) UNIQUE NOT NULL,
+        INDEX idx_language_code (language_code)
+      ) ENGINE=InnoDB;
     `,
 
     USER_API_TABLE: `
@@ -32,82 +39,37 @@ const STRINGS = {
         api_calls_used INT DEFAULT 0,
         api_calls_limit INT DEFAULT 20,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE
-      ) ENGINE=InnoDB
-    `,
 
-    VOICE_TABLE: `
-      CREATE TABLE IF NOT EXISTS voice (
-        voice_id INT AUTO_INCREMENT PRIMARY KEY,
-        voice_name VARCHAR(100) NOT NULL,
-        voice_code VARCHAR(50) UNIQUE NOT NULL,
-        description TEXT,
-        is_active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_voice_code (voice_code),
-        INDEX idx_is_active (is_active)
-      ) ENGINE=InnoDB
-    `,
-
-    LANGUAGE_TABLE: `
-      CREATE TABLE IF NOT EXISTS language (
-        language_id INT AUTO_INCREMENT PRIMARY KEY,
-        language_name VARCHAR(100) NOT NULL,
-        language_code VARCHAR(10) UNIQUE NOT NULL,
-        is_active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_language_code (language_code),
-        INDEX idx_is_active (is_active)
-      ) ENGINE=InnoDB
-    `,
-
-    AUDIO_GENERATION_TABLE: `
-      CREATE TABLE IF NOT EXISTS audio_generation (
-        generation_id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        text_content TEXT NOT NULL,
-        voice_id INT NOT NULL,
-        language_id INT NOT NULL,
-        audio_file_path VARCHAR(500),
-        generation_status ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
-        error_message TEXT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        completed_at TIMESTAMP NULL,
-        INDEX idx_user_id (user_id),
-        INDEX idx_generation_status (generation_status),
-        INDEX idx_created_at (created_at),
-        FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE,
-        FOREIGN KEY (voice_id) REFERENCES voice(voice_id),
-        FOREIGN KEY (language_id) REFERENCES language(language_id)
-      ) ENGINE=InnoDB
-    `,
-
-    USER_PREFERENCE_TABLE: `
-      CREATE TABLE IF NOT EXISTS user_preference (
-        preference_id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT UNIQUE NOT NULL,
-        default_voice_id INT,
-        default_language_id INT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE,
-        FOREIGN KEY (default_voice_id) REFERENCES voice(voice_id),
-        FOREIGN KEY (default_language_id) REFERENCES language(language_id)
-      ) ENGINE=InnoDB
+        CONSTRAINT fk_user_api_user
+          FOREIGN KEY (user_id) REFERENCES user(user_id)
+          ON DELETE CASCADE
+          ON UPDATE CASCADE
+      ) ENGINE=InnoDB;
     `,
 
     API_USAGE_LOG_TABLE: `
       CREATE TABLE IF NOT EXISTS api_usage_log (
         log_id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
+        language_id INT NULL,
         endpoint VARCHAR(255) NOT NULL,
         method VARCHAR(10) NOT NULL,
         request_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
         INDEX idx_user_id (user_id),
         INDEX idx_request_timestamp (request_timestamp),
         INDEX idx_endpoint (endpoint),
-        FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE
-      ) ENGINE=InnoDB
+
+        CONSTRAINT fk_api_log_user
+          FOREIGN KEY (user_id) REFERENCES user(user_id)
+          ON DELETE CASCADE
+          ON UPDATE CASCADE,
+
+        CONSTRAINT fk_api_log_language
+          FOREIGN KEY (language_id) REFERENCES language(language_id)
+          ON DELETE SET NULL
+          ON UPDATE CASCADE
+      ) ENGINE=InnoDB;
     `,
   },
 
