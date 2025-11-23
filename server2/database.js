@@ -387,6 +387,37 @@ class Database {
     }
   }
 
+  // Database role switching methods
+  async switchToAdminRole() {
+    try {
+      await this.connection.execute("SET ROLE 'audio_book_admin'");
+      console.log('Switched to admin role');
+    } catch (error) {
+      console.error('Error switching to admin role:', error.message);
+      throw error;
+    }
+  }
+
+  async switchToUserRole() {
+    try {
+      await this.connection.execute("SET ROLE 'audio_book_user'");
+      console.log('Switched to user role');
+    } catch (error) {
+      console.error('Error switching to user role:', error.message);
+      throw error;
+    }
+  }
+
+  async resetRole() {
+    try {
+      await this.connection.execute("SET ROLE NONE");
+      console.log('Reset to default role');
+    } catch (error) {
+      console.error('Error resetting role:', error.message);
+      throw error;
+    }
+  }
+
   async close() {
     if (this.connection) {
       await this.connection.end();
