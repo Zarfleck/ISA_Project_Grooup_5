@@ -21,7 +21,16 @@ const STRINGS = {
         last_login TIMESTAMP NULL,
         INDEX idx_email (email),
         INDEX idx_account_status (account_status)
-      ) ENGINE=InnoDB
+      ) ENGINE=InnoDB;
+    `,
+
+    LANGUAGE_TABLE: `
+      CREATE TABLE IF NOT EXISTS language (
+        language_id INT AUTO_INCREMENT PRIMARY KEY,
+        language_name VARCHAR(100) NOT NULL,
+        language_code VARCHAR(10) UNIQUE NOT NULL,
+        INDEX idx_language_code (language_code)
+      ) ENGINE=InnoDB;
     `,
 
     USER_API_TABLE: `
@@ -30,7 +39,11 @@ const STRINGS = {
         api_calls_used INT DEFAULT 0,
         api_calls_limit INT DEFAULT 20,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE
+
+        CONSTRAINT fk_user_api_user
+          FOREIGN KEY (user_id) REFERENCES user(user_id)
+          ON DELETE CASCADE
+          ON UPDATE CASCADE
       ) ENGINE=InnoDB
     `,
 
@@ -39,6 +52,7 @@ const STRINGS = {
         language_id INT AUTO_INCREMENT PRIMARY KEY,
         language_name VARCHAR(100) NOT NULL,
         language_code VARCHAR(10) UNIQUE NOT NULL,
+        
         INDEX idx_language_code (language_code)
       ) ENGINE=InnoDB
     `,
@@ -51,11 +65,20 @@ const STRINGS = {
         endpoint VARCHAR(255) NOT NULL,
         method VARCHAR(10) NOT NULL,
         request_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
         INDEX idx_user_id (user_id),
         INDEX idx_request_timestamp (request_timestamp),
         INDEX idx_endpoint (endpoint),
-        FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE,
-        FOREIGN KEY (language_id) REFERENCES language(language_id) ON DELETE CASCADE
+
+        CONSTRAINT fk_api_log_user
+          FOREIGN KEY (user_id) REFERENCES user(user_id)
+          ON DELETE CASCADE
+          ON UPDATE CASCADE,
+
+        CONSTRAINT fk_api_log_language
+          FOREIGN KEY (language_id) REFERENCES language(language_id)
+          ON DELETE SET NULL
+          ON UPDATE CASCADE
       ) ENGINE=InnoDB
     `,
   },
