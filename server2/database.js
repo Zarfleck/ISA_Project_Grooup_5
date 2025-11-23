@@ -430,6 +430,27 @@ class Database {
     }
   }
 
+  async resetUserApiUsage(userId) {
+    try {
+      const [result] = await this.connection.execute(
+        "UPDATE user_api SET api_calls_used = 0 WHERE user_id = ?",
+        [userId]
+      );
+      return {
+        success: true,
+        message: "API usage reset successfully",
+        affectedRows: result.affectedRows
+      };
+    } catch (error) {
+      console.error('Reset API usage error:', error.message);
+      return {
+        success: false,
+        message: "Failed to reset API usage",
+        error: error.message
+      };
+    }
+  }
+
   async close() {
     if (this.connection) {
       await this.connection.end();
