@@ -57,6 +57,9 @@
               <th scope="col" class="px-6 py-3 text-right">
                 API Calls
               </th>
+              <th scope="col" class="px-6 py-3 text-center">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -90,11 +93,25 @@
                       <%= user.api_calls_limit %>
                     </span>
                   </td>
+                  <td class="px-6 py-4 text-center">
+                    <% if (user.user_id !== currentAdmin.user_id) { %>
+                      <button onclick="deleteUser(<%= user.user_id %>)" 
+                              class="text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-3 py-2 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800 mr-2">
+                        Delete
+                      </button>
+                      <button onclick="resetUsage(<%= user.user_id %>)" 
+                              class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-3 py-2 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+                        Reset Usage
+                      </button>
+                    <% } else { %>
+                      <span class="text-gray-500 italic">Current Admin</span>
+                    <% } %>
+                  </td>
                 </tr>
                 <% }); %>
                   <% } else { %>
                     <tr>
-                      <td colspan="6" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                      <td colspan="4" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                         No users found.
                       </td>
                     </tr>
@@ -128,6 +145,54 @@
         });
       }
     });
+
+    // Delete user function
+    async function deleteUser(userId) {
+      if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+        try {
+          const response = await fetch(`/admin/users/${userId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            alert('User deleted successfully');
+            window.location.reload(); // Refresh the page to update the table
+          } else {
+            alert('Error deleting user: ' + result.message);
+          }
+        } catch (error) {
+          console.error('Delete user error:', error);
+          alert('Failed to delete user. Please try again.');
+        }
+      }
+    }
+
+    // Reset user API usage function
+    async function resetUsage(userId) {
+      if (confirm('Reset API usage for this user?')) {
+        try {
+          const response = await fetch(`/admin/users/${userId}/reset-usage`, {
+            method: 'PATCH',
+            credentials: 'include'
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            alert('API usage reset successfully');
+            window.location.reload(); // Refresh the page to update the table
+          } else {
+            alert('Error resetting API usage: ' + result.message);
+          }
+        } catch (error) {
+          console.error('Reset usage error:', error);
+          alert('Failed to reset API usage. Please try again.');
+        }
+      }
+    }
   </script>
 
 </body>
