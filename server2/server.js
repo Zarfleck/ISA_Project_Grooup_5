@@ -115,6 +115,9 @@ export async function requireAdminAuth(request, response, next) {
 
     if (!user || !user.is_admin) return response.redirect("/admin/login");
 
+    // Switch to admin role for admin operations
+    await db.switchToAdminRole();
+
     // Make admin info available in views
     response.locals.admin = {
       email: user.email,
@@ -131,6 +134,31 @@ export async function requireAdminAuth(request, response, next) {
 export function redirectIfAuthenticated(req, res, next) {
   if (req.cookies?.token) return res.redirect("/admin/dashboard");
   next();
+}
+
+// Middleware for user route protection
+export async function requireUserAuth(request, response, next) {
+  try {
+    const user = await authenticateRequest(request);
+    if (!user) {
+      return response.status(401).json({
+        success: false,
+        message: STRINGS.RESPONSES.ERROR_AUTHENTICATION,
+      });
+    }
+
+    // Switch to user role for limited privileges
+    await db.switchToUserRole();
+
+    request.user = user;
+    next();
+  } catch (err) {
+    console.error("User auth middleware error:", err.message);
+    response.status(500).json({
+      success: false,
+      message: STRINGS.RESPONSES.ERROR_SERVER,
+    });
+  }
 }
 
 //==============================//Routes//==============================//
@@ -256,6 +284,102 @@ adminRouter.get("/dashboard", requireAdminAuth, async (request, response) => {
   });
 });
 
+// DELETE /admin/users/:id - Admin delete user endpoint
+adminRouter.delete("/users/:id", requireAdminAuth, async (request, response) => {
+  try {
+    const userId = parseInt(request.params.id);
+    
+    // Validate user ID
+    if (!userId || isNaN(userId)) {
+      return response.status(400).json({
+        success: false,
+        message: "Invalid user ID"
+      });
+    }
+
+    // Prevent admin from deleting themselves
+    if (userId === request.admin.user_id) {
+      return response.status(400).json({
+        success: false,
+        message: "Cannot delete your own account"
+      });
+    }
+
+    // Delete user using database method
+    const result = await db.deleteUser(userId);
+
+    if (result.success) {
+      return response.status(200).json({
+        success: true,
+        message: result.message
+      });
+    } else {
+      return response.status(500).json({
+        success: false,
+        message: result.message
+      });
+    }
+  } catch (error) {
+    console.error("Delete user endpoint error:", error.message);
+    return response.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+});
+
+// PATCH /admin/users/:id/reset-usage - Admin reset user API usage
+adminRouter.patch("/users/:id/reset-usage", requireAdminAuth, async (request, response) => {
+  try {
+    const userId = parseInt(request.params.id);
+    
+    // Validate user ID
+    if (!userId || isNaN(userId)) {
+      return response.status(400).json({
+        success: false,
+        message: "Invalid user ID"
+      });
+    }
+
+    // Check if user exists
+    const user = await db.getUserById(userId);
+    if (!user) {
+      return response.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    // Reset API usage using database method
+    const result = await db.resetUserApiUsage(userId);
+
+    if (result.success) {
+      // Get updated usage info
+      const updatedUsage = await db.getUserApiUsage(userId);
+      
+      return response.status(200).json({
+        success: true,
+        message: result.message,
+        apiUsage: {
+          used: updatedUsage.api_calls_used,
+          limit: updatedUsage.api_calls_limit
+        }
+      });
+    } else {
+      return response.status(500).json({
+        success: false,
+        message: result.message
+      });
+    }
+  } catch (error) {
+    console.error("Reset API usage endpoint error:", error.message);
+    return response.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+});
+
 // Mount under /admin
 app.use("/admin", adminRouter);
 
@@ -363,15 +487,9 @@ userRouter.post("/auth/login", async (request, response) => {
 });
 
 // Current user info route
-userRouter.get("/auth/me", async (request, response) => {
+userRouter.get("/auth/me", requireUserAuth, async (request, response) => {
   try {
-    const user = await authenticateRequest(request);
-    if (!user) {
-      return response.status(401).json({
-        success: false,
-        message: STRINGS.RESPONSES.ERROR_AUTHENTICATION,
-      });
-    }
+    const user = request.user; // Set by requireUserAuth middleware
 
     const apiLimit = await db.checkApiLimit(user.user_id);
     const apiUsage = await db.getUserApiUsage(user.user_id);
@@ -396,15 +514,9 @@ userRouter.get("/auth/me", async (request, response) => {
 });
 
 // TTS proxy: authenticate, check quota, call server3, and persist usage
-userRouter.post("/tts/synthesize", async (request, response) => {
+userRouter.post("/tts/synthesize", requireUserAuth, async (request, response) => {
   try {
-    const user = await authenticateRequest(request);
-    if (!user) {
-      return response.status(401).json({
-        success: false,
-        message: STRINGS.RESPONSES.ERROR_AUTHENTICATION,
-      });
-    }
+    const user = request.user; // Set by requireUserAuth middleware
 
     const apiLimit = await db.checkApiLimit(user.user_id);
     const apiUsage = {
