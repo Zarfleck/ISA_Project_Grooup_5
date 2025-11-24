@@ -1,9 +1,9 @@
 // Local backend server (cannot use env vars in frontend)
-export const BACKEND_SERVER_URL = "http://localhost:3000/api";
+// export const BACKEND_SERVER_URL = "http://localhost:3000/api";
 
 // // Deployed Backend server
-// export const BACKEND_SERVER_URL =
-//   "https://comp4537-group5-9lwth.ondigitalocean.app/api/v1";
+export const BACKEND_SERVER_URL =
+  "https://comp4537-group5-9lwth.ondigitalocean.app/api/v1";
 
 // Route for TTS now proxies through the backend so API usage is tracked
 export const AI_SERVER_URL = `${BACKEND_SERVER_URL}/tts`;
