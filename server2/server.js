@@ -1221,7 +1221,8 @@ userRouter.post(
           updatedUsage.api_calls_limit - updatedUsage.api_calls_used,
           0
         ),
-        limitExceeded: updatedUsage.api_calls_used >= updatedUsage.api_calls_limit,
+        limitExceeded:
+          updatedUsage.api_calls_used >= updatedUsage.api_calls_limit,
       };
       const usageLimitExceeded =
         refreshedUsage.limitExceeded || refreshedUsage.remaining <= 0;
@@ -1296,7 +1297,7 @@ userRouter.post("/auth/logout", (request, response) => {
  * @swagger
  * /api/v1/usage/increment:
  *   post:
- *     summary: Increment the calling user's API usage counter (testing helper).
+ *     summary: Increment the calling user's API usage counter.
  *     tags: [Usage]
  *     security:
  *       - CookieAuth: []
