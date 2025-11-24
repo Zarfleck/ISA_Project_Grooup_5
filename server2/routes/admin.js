@@ -18,6 +18,38 @@ export function createAdminRouter(db, STRINGS, requireAdminAuth) {
     });
   });
 
+  /**
+   * @swagger
+   * /admin/login:
+   *   post:
+   *     summary: Authenticate an admin and issue a JWT cookie.
+   *     tags: [Admin]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: "#/components/schemas/AuthCredentials"
+   *     responses:
+   *       200:
+   *         description: Admin authenticated.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/LoginResponse"
+   *       400:
+   *         description: Missing required fields.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   *       401:
+   *         description: Invalid admin credentials.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   */
   adminRouter.post("/login", async (request, response) => {
     try {
       const { email, password } = request.body || {};
@@ -35,7 +67,10 @@ export function createAdminRouter(db, STRINGS, requireAdminAuth) {
         });
       }
 
-      const passwordValid = await db.verifyPassword(password, user.password_hash);
+      const passwordValid = await db.verifyPassword(
+        password,
+        user.password_hash
+      );
       if (!passwordValid) {
         return response.status(401).json({
           success: false,
@@ -79,6 +114,38 @@ export function createAdminRouter(db, STRINGS, requireAdminAuth) {
     });
   });
 
+  /**
+   * @swagger
+   * /admin/add-admin:
+   *   post:
+   *     summary: Create a new admin user.
+   *     tags: [Admin]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: "#/components/schemas/AuthCredentials"
+   *     responses:
+   *       200:
+   *         description: Admin account created.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/SignupResponse"
+   *       400:
+   *         description: Missing fields or duplicate email.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   *       500:
+   *         description: Database or server error while creating the admin.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   */
   adminRouter.post("/add-admin", async (request, response) => {
     try {
       const { email, password } = request.body || {};
@@ -128,6 +195,52 @@ export function createAdminRouter(db, STRINGS, requireAdminAuth) {
   });
 
   // Admin dashboard route
+  /**
+   * @swagger
+   * /admin/dashboard:
+   *   get:
+   *     summary: Fetch admin dashboard data (users and API usage stats).
+   *     tags: [Admin]
+   *     security:
+   *       - CookieAuth: []
+   *     responses:
+   *       200:
+   *         description: Dashboard data for the authenticated admin.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                 admin:
+   *                   type: object
+   *                   properties:
+   *                     userId:
+   *                       type: integer
+   *                     email:
+   *                       type: string
+   *                 users:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                 endpointStats:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       401:
+   *         description: Missing or invalid admin session.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   *       500:
+   *         description: Server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   */
   adminRouter.get(
     "/dashboard",
     adminStatsMiddleware,
@@ -157,6 +270,53 @@ export function createAdminRouter(db, STRINGS, requireAdminAuth) {
   );
 
   // DELETE /admin/users/:id - Admin delete user endpoint
+  /**
+   * @swagger
+   * /admin/users/{id}:
+   *   delete:
+   *     summary: Delete a non-admin user account.
+   *     tags: [Admin]
+   *     security:
+   *       - CookieAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: ID of the user to delete.
+   *     responses:
+   *       200:
+   *         description: User deleted.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/MessageResponse"
+   *       400:
+   *         description: Invalid or missing user id.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   *       401:
+   *         description: Missing or invalid admin session.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   *       403:
+   *         description: Attempt to delete an admin account.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   *       404:
+   *         description: User not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   */
   adminRouter.delete(
     "/users/:id",
     adminStatsMiddleware,
@@ -223,6 +383,47 @@ export function createAdminRouter(db, STRINGS, requireAdminAuth) {
   );
 
   // PATCH /admin/users/:id/reset-usage - Admin reset user API usage
+  /**
+   * @swagger
+   * /admin/users/{id}/reset-usage:
+   *   patch:
+   *     summary: Reset a user's API usage counters.
+   *     tags: [Admin]
+   *     security:
+   *       - CookieAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: User ID whose usage will be reset.
+   *     responses:
+   *       200:
+   *         description: Usage counters reset.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ResetUsageResponse"
+   *       400:
+   *         description: Invalid user id provided.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   *       401:
+   *         description: Missing or invalid admin session.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   *       404:
+   *         description: User not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   */
   adminRouter.patch(
     "/users/:id/reset-usage",
     adminStatsMiddleware,
@@ -281,4 +482,3 @@ export function createAdminRouter(db, STRINGS, requireAdminAuth) {
 
   return adminRouter;
 }
-

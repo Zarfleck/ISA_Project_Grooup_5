@@ -11,9 +11,9 @@
   <script type="module" src="../js/home.js"></script>
 </head>
 
-<body class="min-h-screen">
+<body class="min-h-screen overflow-y-auto">
   <div data-include="templates/header.html"></div>
-  <main class="flex h-[calc(100vh-7rem)] w-full justify-center items-center bg-white dark:bg-gray-900">
+  <main class="flex h-[calc(100vh-4rem)] w-full justify-center items-center bg-white dark:bg-gray-900">
     <div class="py-6 px-4 mx-auto min-w-full lg:py-10">
       <div id="api-limit-warning" class="hidden"></div>
       <div id="api-usage-container" class="hidden mb-2">
@@ -74,10 +74,10 @@
       </form>
 
       <div id="audio-player-container" class="mt-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Generated Audio Playback</h3>
+        <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Generated Audio Playback</h3>
 
         <!-- Audio Player Card: Initially set to DISABLED state classes -->
-        <div id="audio-card" class="p-4 rounded-xl shadow-lg transition-all duration-300 
+        <div id="audio-card" class="p-2 rounded-xl shadow-lg transition-all duration-300 
                                  bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700
                                  opacity-50 cursor-not-allowed">
 
@@ -94,7 +94,7 @@
 
           <!-- Optional Download Button (Hidden when disabled) -->
           <a id="download-link" href="#" download="generated_speech.wav"
-            class="mt-3 text-sm font-medium text-sky-700 dark:text-sky-400 hover:underline hidden">
+            class="mt-2 text-sm font-medium text-sky-700 dark:text-sky-400 hover:underline hidden">
             Download Audio
           </a>
         </div>

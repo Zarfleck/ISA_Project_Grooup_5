@@ -1,7 +1,3 @@
-// Logic for home.html
-// - Basic guard: if no token, redirect to login
-// - Fetch profile to verify token and check API limits
-
 import { requireAuth, clearToken } from "./auth.js";
 import {
   backendApi,
@@ -86,8 +82,7 @@ function renderApiUsageBanner(rawUsage) {
   const usageText = document.getElementById("api-usage-text");
   const submitButton = document.getElementById("create-speech-button");
 
-  const limitReached =
-    usage?.limitExceeded || (usage?.remaining ?? 1) <= 0;
+  const limitReached = usage?.limitExceeded || (usage?.remaining ?? 1) <= 0;
 
   if (!usageContainer || !usageText) return usage;
 
@@ -125,11 +120,7 @@ async function checkCurrentUser() {
       currentUser.user?.apiLimitExceeded ||
       usage?.limitExceeded ||
       (usage?.remaining ?? 1) <= 0;
-    if (
-      currentUser.success &&
-      currentUser.user &&
-      limitReached
-    ) {
+    if (currentUser.success && currentUser.user && limitReached) {
       showApiLimitWarning();
     } else {
       hideApiLimitWarning();
@@ -222,8 +213,7 @@ function initializeTextToSpeechForm() {
         audioControls.load();
         audioCard.classList.add(...ENABLED_CLASSES);
         audioStatus.classList.add("text-sky-700", "dark:text-sky-300");
-        audioStatus.textContent =
-          message || UI_STRINGS.HOME.PLAYER_READY;
+        audioStatus.textContent = message || UI_STRINGS.HOME.PLAYER_READY;
         if (audioUrl) {
           downloadLink.href = audioUrl;
           downloadLink.download =
@@ -238,8 +228,7 @@ function initializeTextToSpeechForm() {
         audioControls.load();
         audioCard.classList.add(...DISABLED_CLASSES);
         audioStatus.classList.add("text-gray-500", "dark:text-gray-400");
-        audioStatus.textContent =
-          message || UI_STRINGS.HOME.PLAYER_LOADING;
+        audioStatus.textContent = message || UI_STRINGS.HOME.PLAYER_LOADING;
         break;
       }
       case "error": {
@@ -254,8 +243,7 @@ function initializeTextToSpeechForm() {
           "dark:bg-red-900/40"
         );
         audioStatus.classList.add("text-red-600", "dark:text-red-300");
-        audioStatus.textContent =
-          message || UI_STRINGS.HOME.PLAYER_ERROR;
+        audioStatus.textContent = message || UI_STRINGS.HOME.PLAYER_ERROR;
         break;
       }
       case "disabled":
@@ -265,8 +253,7 @@ function initializeTextToSpeechForm() {
         audioControls.load();
         audioCard.classList.add(...DISABLED_CLASSES);
         audioStatus.classList.add("text-gray-500", "dark:text-gray-400");
-        audioStatus.textContent =
-          message || UI_STRINGS.HOME.PLAYER_DISABLED;
+        audioStatus.textContent = message || UI_STRINGS.HOME.PLAYER_DISABLED;
         break;
       }
     }
@@ -288,8 +275,7 @@ function initializeTextToSpeechForm() {
     const language = languageSelect.value.trim().toLowerCase();
     const limitReached =
       apiUsageState?.limitExceeded ||
-      (apiUsageState?.remaining !== undefined &&
-        apiUsageState.remaining <= 0);
+      (apiUsageState?.remaining !== undefined && apiUsageState.remaining <= 0);
 
     if (!text) {
       setAudioPlayerState("error", {
@@ -346,8 +332,7 @@ function initializeTextToSpeechForm() {
       });
     } catch (error) {
       console.error(UI_STRINGS.HOME.SYNTHESIS_FAILURE_PREFIX, error);
-      const message =
-        error?.message || UI_STRINGS.HOME.PLAYER_ERROR;
+      const message = error?.message || UI_STRINGS.HOME.PLAYER_ERROR;
       setAudioPlayerState("error", { message });
       if (error?.data?.apiUsage) {
         renderApiUsageBanner(error.data.apiUsage);

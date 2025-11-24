@@ -21,6 +21,38 @@ export function createUserRouter(
   userRouter.use(apiStatsMiddleware);
 
   // Signup route
+  /**
+   * @swagger
+   * /api/v1/auth/signup:
+   *   post:
+   *     summary: Register a new user account and issue a JWT cookie.
+   *     tags: [User Auth]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: "#/components/schemas/AuthCredentials"
+   *     responses:
+   *       200:
+   *         description: User created.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/SignupResponse"
+   *       400:
+   *         description: Missing fields or email already exists.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   *       500:
+   *         description: Database or server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   */
   userRouter.post("/auth/signup", async (request, response) => {
     try {
       const { email, password } = request.body || {};
@@ -65,6 +97,38 @@ export function createUserRouter(
   });
 
   // Login route
+  /**
+   * @swagger
+   * /api/v1/auth/login:
+   *   post:
+   *     summary: Authenticate an existing user and issue a JWT cookie.
+   *     tags: [User Auth]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: "#/components/schemas/AuthCredentials"
+   *     responses:
+   *       200:
+   *         description: User authenticated.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/LoginResponse"
+   *       400:
+   *         description: Missing email or password.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   *       401:
+   *         description: Invalid credentials.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   */
   userRouter.post("/auth/login", async (request, response) => {
     try {
       const { email, password } = request.body || {};
@@ -118,6 +182,28 @@ export function createUserRouter(
   });
 
   // Current user info route
+  /**
+   * @swagger
+   * /api/v1/auth/me:
+   *   get:
+   *     summary: Fetch the currently authenticated user's profile and quota.
+   *     tags: [User Auth]
+   *     security:
+   *       - CookieAuth: []
+   *     responses:
+   *       200:
+   *         description: Authenticated user info.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/MeResponse"
+   *       401:
+   *         description: Missing or invalid session.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   */
   userRouter.get("/auth/me", requireUserAuth, async (request, response) => {
     try {
       const user = request.user; // Set by requireUserAuth middleware
@@ -145,6 +231,52 @@ export function createUserRouter(
   });
 
   // TTS proxy: authenticate, check quota, call server3, and persist usage
+  /**
+   * @swagger
+   * /api/v1/tts/synthesize:
+   *   post:
+   *     summary: Convert text to speech via the AI proxy while enforcing quotas.
+   *     tags: [Text to Speech]
+   *     security:
+   *       - CookieAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: "#/components/schemas/TtsRequest"
+   *     responses:
+   *       200:
+   *         description: Audio generated successfully.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/TtsResponse"
+   *       400:
+   *         description: Missing text or language.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   *       401:
+   *         description: Missing or invalid user session.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   *       429:
+   *         description: API quota exceeded.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   *       503:
+   *         description: Upstream TTS service unavailable.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   */
   userRouter.post(
     "/tts/synthesize",
     requireUserAuth,
@@ -265,6 +397,28 @@ export function createUserRouter(
   );
 
   // Logout route
+  /**
+   * @swagger
+   * /api/v1/auth/logout:
+   *   post:
+   *     summary: Clear the JWT cookie for the current session.
+   *     tags: [User Auth]
+   *     security:
+   *       - CookieAuth: []
+   *     responses:
+   *       200:
+   *         description: Session cleared.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/MessageResponse"
+   *       500:
+   *         description: Server error clearing the session.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   */
   userRouter.post("/auth/logout", (request, response) => {
     try {
       clearTokenCookie(response);
@@ -283,6 +437,34 @@ export function createUserRouter(
   });
 
   // Increase API call route temporarily used for testing (behaving differently between prod and dev)
+  /**
+   * @swagger
+   * /api/v1/usage/increment:
+   *   post:
+   *     summary: Increment the calling user's API usage counter (testing helper).
+   *     tags: [Usage]
+   *     security:
+   *       - CookieAuth: []
+   *     responses:
+   *       200:
+   *         description: Usage counter incremented.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/MessageResponse"
+   *       401:
+   *         description: Not authenticated.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   *       500:
+   *         description: Server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: "#/components/schemas/ErrorResponse"
+   */
   userRouter.post("/usage/increment", async (request, response) => {
     try {
       const user = await authenticateRequest(request);

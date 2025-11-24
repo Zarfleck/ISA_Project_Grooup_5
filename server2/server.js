@@ -7,7 +7,7 @@ Claude Sonnet 4 (https://claude.ai/) was used to generate the following code sol
 
     3. Database Integration - The server startup sequence with database connection validation and graceful shutdown handling.
 
-GPT-4o (ChatGPT) helped set up Swagger documentation and configuration.
+GPT-4o (ChatGPT) helped set up Swagger documentation and configuration, and re-applied the API docs after modularizing the routes.
 */
 
 import express from "express";
@@ -211,7 +211,7 @@ const swaggerDefinition = {
 };
 
 const swaggerSpec = swaggerJsdoc({
-  apis: [path.join(__dirname, "*.js")],
+  apis: [path.join(__dirname, "routes/*.js")],
   definition: swaggerDefinition,
 });
 
