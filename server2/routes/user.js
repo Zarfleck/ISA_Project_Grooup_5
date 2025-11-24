@@ -146,7 +146,10 @@ export function createUserRouter(
         });
       }
 
-      const passwordValid = await db.verifyPassword(password, user.password_hash);
+      const passwordValid = await db.verifyPassword(
+        password,
+        user.password_hash
+      );
       if (!passwordValid) {
         return response.status(401).json({
           success: false,
@@ -348,9 +351,7 @@ export function createUserRouter(
           return response.status(aiResponse.status).json({
             success: false,
             message:
-              aiData?.detail ||
-              aiData?.message ||
-              STRINGS.TTS.SERVICE_ERROR,
+              aiData?.detail || aiData?.message || STRINGS.TTS.SERVICE_ERROR,
             apiUsage,
             apiLimitExceeded: apiLimit.exceeded,
             ...(apiLimit.exceeded
@@ -441,7 +442,7 @@ export function createUserRouter(
    * @swagger
    * /api/v1/usage/increment:
    *   post:
-   *     summary: Increment the calling user's API usage counter (testing helper).
+   *     summary: Increment the calling user's API usage counter.
    *     tags: [Usage]
    *     security:
    *       - CookieAuth: []
@@ -491,4 +492,3 @@ export function createUserRouter(
 
   return userRouter;
 }
-
