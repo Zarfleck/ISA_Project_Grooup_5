@@ -36,7 +36,7 @@ const AI_SERVER_URL =
 
 // Set EJS as the templating engine
 app.set("view engine", "ejs");
-app.set("views", path.join(dirname(fileURLToPath(import.meta.url)), "views"));
+app.set("views", path.join(process.cwd(), "views"));
 
 app.use(express.json());
 app.use(cookieParser());
@@ -55,13 +55,7 @@ const defaultOrigins = [
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:8080",
-      "http://127.0.0.1:8080",
-      "https://4537fe.netlify.app",
-      "https://isa-server1.netlify.app",
-    ],
+    origin: allowedOrigins.length > 0 ? allowedOrigins : defaultOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
