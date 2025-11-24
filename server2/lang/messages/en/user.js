@@ -174,6 +174,7 @@ const STRINGS = {
   ADMIN: {
     INVALID_USER_ID: "Invalid user ID",
     CANNOT_DELETE_SELF: "Cannot delete your own account",
+    CANNOT_DELETE_ADMIN: "Cannot delete admin users",
     USER_NOT_FOUND: "User not found",
     DELETE_SUCCESS: "User deleted successfully",
     DELETE_FAILURE: "Failed to delete user",
