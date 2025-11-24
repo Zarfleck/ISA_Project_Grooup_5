@@ -19,12 +19,12 @@ import STRINGS from "./lang/messages/en/user.js";
 class Database {
   constructor() {
     this.connection = null;
-    this.currentRole = 'user'; // Track current database role
+    this.currentRole = "user"; // Track current database role
   }
 
   async connect() {
     try {
-      console.log("DB Config:", {
+      console.log(STRINGS.DATABASE_MESSAGES.DB_CONFIG_PREFIX, {
         host: process.env.MYSQL_HOST,
         port: process.env.MYSQL_PORT,
         user: process.env.MYSQL_USER,
@@ -54,7 +54,9 @@ class Database {
     try {
       // Create all Audio Book database tables
       await this.connection.execute(STRINGS.CREATE_TABLES_QUERIES.USER_TABLE);
-      await this.connection.execute(STRINGS.CREATE_TABLES_QUERIES.USER_API_TABLE);
+      await this.connection.execute(
+        STRINGS.CREATE_TABLES_QUERIES.LANGUAGE_TABLE
+      );
       await this.connection.execute(
         STRINGS.CREATE_TABLES_QUERIES.USER_API_TABLE
       );
@@ -64,17 +66,16 @@ class Database {
 
       console.log(STRINGS.SERVER.TABLES_CREATED);
     } catch (error) {
-      console.error("Table creation error:", error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.TABLE_CREATION_ERROR,
+        error.message
+      );
       throw error;
     }
   }
 
   // This block of code below was assisted by Claude Sonnet 4 (https://claude.ai/)
-  async insertUser(
-    email,
-    passwordHash,
-    isAdmin = false
-  ) {
+  async insertUser(email, passwordHash, isAdmin = false) {
     try {
       const [result] = await this.connection.execute(
         "INSERT INTO user (email, password_hash, is_admin) VALUES (?, ?, ?)",
@@ -94,11 +95,11 @@ class Database {
         userId: result.insertId,
       };
     } catch (error) {
-      console.error("Insert user error:", error.message);
+      console.error(STRINGS.DATABASE_MESSAGES.INSERT_USER_ERROR, error.message);
       if (error.code === "ER_DUP_ENTRY") {
         return {
           success: false,
-          message: "Email already exists",
+          message: STRINGS.DATABASE_MESSAGES.DUPLICATE_EMAIL,
           error: error.message,
         };
       }
@@ -116,11 +117,8 @@ class Database {
 
       // Insert default users
       for (const user of STRINGS.DEFAULT_USERS) {
-        const result = await this.insertUser(
-          user.email,
-          user.password, // Note: In production, this should be hashed
-          user.is_admin
-        );
+        const hashed = await this.hashPassword(user.password);
+        const result = await this.insertUser(user.email, hashed, user.is_admin);
         results.users.push(result);
       }
 
@@ -140,7 +138,10 @@ class Database {
 
       return {
         success: true,
-        message: `Inserted default data: ${results.users.length} users, ${results.languages.length} languages`,
+        message: STRINGS.DATABASE_MESSAGES.DEFAULT_DATA_INSERTED(
+          results.users.length,
+          results.languages.length
+        ),
         results: results,
       };
     } catch (error) {
@@ -163,13 +164,18 @@ class Database {
       );
 
       if (rows.length === 0) {
-        console.warn(`Language code not found: ${languageCode}`);
+        console.warn(
+          STRINGS.DATABASE_MESSAGES.LANGUAGE_NOT_FOUND(languageCode)
+        );
         return null;
       }
 
       return rows[0].language_id;
     } catch (error) {
-      console.error("Get language ID error:", error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.GET_LANGUAGE_ID_ERROR,
+        error.message
+      );
       return null;
     }
   }
@@ -209,7 +215,10 @@ class Database {
         data: rows,
       };
     } catch (error) {
-      console.error("Query execution error:", error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.QUERY_EXECUTION_ERROR,
+        error.message
+      );
       return {
         success: false,
         message: STRINGS.RESPONSES.ERROR_DATABASE,
@@ -225,7 +234,10 @@ class Database {
       );
       return rows;
     } catch (error) {
-      console.error("Get all users error:", error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.GET_ALL_USERS_ERROR,
+        error.message
+      );
       return [];
     }
   }
@@ -241,7 +253,10 @@ class Database {
       );
       return rows;
     } catch (error) {
-      console.error("Get all users with API usage error:", error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.GET_ALL_USERS_WITH_USAGE_ERROR,
+        error.message
+      );
       return [];
     }
   }
@@ -254,7 +269,10 @@ class Database {
       );
       return rows.length > 0 ? rows[0] : null;
     } catch (error) {
-      console.error("Find user by email error:", error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.FIND_USER_BY_EMAIL_ERROR,
+        error.message
+      );
       return null;
     }
   }
@@ -267,7 +285,10 @@ class Database {
       );
       return rows.length > 0 ? rows[0] : null;
     } catch (error) {
-      console.error("Get user by ID error:", error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.GET_USER_BY_ID_ERROR,
+        error.message
+      );
       return null;
     }
   }
@@ -288,7 +309,10 @@ class Database {
       }
       return rows[0];
     } catch (error) {
-      console.error("Get user API usage error:", error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.GET_USER_API_USAGE_ERROR,
+        error.message
+      );
       return { api_calls_used: 0, api_calls_limit: 20 };
     }
   }
@@ -297,7 +321,10 @@ class Database {
     try {
       return await bcrypt.compare(plainPassword, hashedPassword);
     } catch (error) {
-      console.error("Password verification error:", error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.PASSWORD_VERIFICATION_ERROR,
+        error.message
+      );
       return false;
     }
   }
@@ -307,7 +334,10 @@ class Database {
       const saltRounds = 10;
       return await bcrypt.hash(password, saltRounds);
     } catch (error) {
-      console.error("Password hashing error:", error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.PASSWORD_HASHING_ERROR,
+        error.message
+      );
       throw error;
     }
   }
@@ -335,7 +365,10 @@ class Database {
       );
       return true;
     } catch (error) {
-      console.error("Increment API calls error:", error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.INCREMENT_API_CALLS_ERROR,
+        error.message
+      );
       return false;
     }
   }
@@ -349,7 +382,10 @@ class Database {
         limit: apiUsage.api_calls_limit,
       };
     } catch (error) {
-      console.error("Check API limit error:", error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.CHECK_API_LIMIT_ERROR,
+        error.message
+      );
       return { exceeded: false, used: 0, limit: 20 };
     }
   }
@@ -359,7 +395,7 @@ class Database {
       const languageId = await this.getLanguageIdByCode(languageCode);
       if (!languageId) {
         console.warn(
-          `Skipping API usage log due to missing language ID for code: ${languageCode}`
+          STRINGS.DATABASE_MESSAGES.LOG_API_USAGE_SKIP(languageCode)
         );
         return false;
       }
@@ -368,11 +404,20 @@ class Database {
         "INSERT INTO api_usage_log (user_id, language_id, endpoint, method) VALUES (?, ?, ?, ?)",
         [userId, languageId, endpoint, method]
       );
-      
-      console.log(`✓ Logged API call: ${method} ${endpoint} for user ${userId}`);
+
+      console.log(
+        STRINGS.DATABASE_MESSAGES.LOG_API_USAGE_SUCCESS(
+          method,
+          endpoint,
+          userId
+        )
+      );
       return true;
     } catch (error) {
-      console.error("Log API usage error:", error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.LOG_API_USAGE_ERROR,
+        error.message
+      );
       return false;
     }
   }
@@ -385,7 +430,10 @@ class Database {
       );
       return true;
     } catch (error) {
-      console.error("Update last login error:", error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.UPDATE_LAST_LOGIN_ERROR,
+        error.message
+      );
       return false;
     }
   }
@@ -394,10 +442,13 @@ class Database {
   async switchToAdminRole() {
     try {
       await this.connection.execute("SET ROLE 'audio_book_admin'");
-      this.currentRole = 'admin';
-      console.log('Switched to admin role');
+      this.currentRole = "admin";
+      console.log(STRINGS.DATABASE_MESSAGES.SWITCH_TO_ADMIN);
     } catch (error) {
-      console.error('Error switching to admin role:', error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.SWITCH_TO_ADMIN_ERROR,
+        error.message
+      );
       throw error;
     }
   }
@@ -405,10 +456,13 @@ class Database {
   async switchToUserRole() {
     try {
       await this.connection.execute("SET ROLE 'audio_book_user'");
-      this.currentRole = 'user';
-      console.log('Switched to user role');
+      this.currentRole = "user";
+      console.log(STRINGS.DATABASE_MESSAGES.SWITCH_TO_USER);
     } catch (error) {
-      console.error('Error switching to user role:', error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.SWITCH_TO_USER_ERROR,
+        error.message
+      );
       throw error;
     }
   }
@@ -422,15 +476,18 @@ class Database {
       );
       return {
         success: true,
-        message: "User deleted successfully",
-        affectedRows: result.affectedRows
+        message: STRINGS.ADMIN.DELETE_SUCCESS,
+        affectedRows: result.affectedRows,
       };
     } catch (error) {
-      console.error('Delete user error:', error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.DELETE_USER_ERROR,
+        error.message
+      );
       return {
         success: false,
-        message: "Failed to delete user",
-        error: error.message
+        message: STRINGS.ADMIN.DELETE_FAILURE,
+        error: error.message,
       };
     }
   }
@@ -443,15 +500,18 @@ class Database {
       );
       return {
         success: true,
-        message: "API usage reset successfully",
-        affectedRows: result.affectedRows
+        message: STRINGS.API_USAGE.RESET_SUCCESS,
+        affectedRows: result.affectedRows,
       };
     } catch (error) {
-      console.error('Reset API usage error:', error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.RESET_API_USAGE_ERROR,
+        error.message
+      );
       return {
         success: false,
-        message: "Failed to reset API usage",
-        error: error.message
+        message: STRINGS.API_USAGE.RESET_FAILURE,
+        error: error.message,
       };
     }
   }
@@ -459,7 +519,7 @@ class Database {
   async getEndpointStatistics() {
     try {
       await this.switchToAdminRole();
-      
+
       const [rows] = await this.connection.execute(`
         SELECT 
           method,
@@ -470,25 +530,29 @@ class Database {
         GROUP BY method, endpoint 
         ORDER BY request_count DESC
       `);
-      
+
       // the `formattedRows` variable is generated by Cluaude Sonnet 4 (https://claude.ai/)
-      const formattedRows = rows.map(row => ({
+      const formattedRows = rows.map((row) => ({
         ...row,
-        last_called_formatted: row.last_called_pst ? 
-          new Date(row.last_called_pst).toLocaleString('en-US', {
-            year: 'numeric',
-            month: 'short', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true
-          }) + ' PST' : 'Never'
+        last_called_formatted: row.last_called_pst
+          ? new Date(row.last_called_pst).toLocaleString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: true,
+            }) + " PST"
+          : "Never",
       }));
-      
+
       return formattedRows;
     } catch (error) {
-      console.error("Get endpoint statistics error:", error.message);
+      console.error(
+        STRINGS.DATABASE_MESSAGES.GET_ENDPOINT_STATS_ERROR,
+        error.message
+      );
       return [];
     }
   }

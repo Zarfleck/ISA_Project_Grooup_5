@@ -1,6 +1,11 @@
 // Uses fetch with JSON, attaches token if present
 
-import { AI_SERVER_URL, BACKEND_SERVER_URL, UI_STRINGS } from "./constants.js";
+import {
+  AI_SERVER_URL,
+  BACKEND_SERVER_URL,
+  ROUTES,
+  UI_STRINGS,
+} from "./constants.js";
 import { getToken, clearToken } from "./auth.js";
 
 // Global function to show API limit warning (can be called from anywhere)
@@ -65,7 +70,7 @@ async function makeRequest(
 
   if (respond.status === 401 && auth) {
     clearToken();
-    window.location.href = "/views/login.html";
+    window.location.href = ROUTES.LOGIN;
     return;
   }
 
@@ -78,7 +83,8 @@ async function makeRequest(
   }
 
   if (!respond.ok) {
-    const message = data?.message || `Request failed (${respond.status})`;
+    const message =
+      data?.message || UI_STRINGS.API_CLIENT.REQUEST_FAILED(respond.status);
     const error = new Error(message);
     error.status = respond.status;
     error.data = data;
@@ -108,28 +114,12 @@ export const backendApi = {
 
   incrementApiUsage: () =>
     makeRequest("/usage/increment", { method: "POST", auth: true }),
-
-  // requestPasswordReset: (email) =>
-  //   makeRequest("/auth/password/request", { method: "POST", body: { email } }),
-
-  // Routes for password reset flow (not implemented yet)
-  // verifyResetCode: (email, code) =>
-  //   makeRequest("/auth/password/verify", {
-  //     method: "POST",
-  //     body: { email, code },
-  //   }),
-
-  // resetPassword: (email, code, password) =>
-  //   makeRequest("/auth/password/reset", {
-  //     method: "POST",
-  //     body: { email, code, password },
-  //   }),
 };
 
 export const aiApi = {
   synthesizeSpeech: ({ text, language, speakerId, speakerWavBase64 }) => {
     if (!text) {
-      throw new Error("Text is required when requesting speech synthesis.");
+      throw new Error(UI_STRINGS.API_CLIENT.TEXT_REQUIRED);
     }
 
     const payload = {

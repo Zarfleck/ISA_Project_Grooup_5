@@ -1,14 +1,22 @@
 // Auth token management and simple guards
 
-const TOKEN_KEY = "auth_token";
-const EMAIL_KEY = "auth_email"; // Used through the password reset flow
-const RESET_CODE_KEY = "auth_reset_code";
-const SESSION_FLAG_KEY = "auth_session";
+import {
+  AUTH_SESSION_ACTIVE_VALUE,
+  AUTH_STORAGE_KEYS,
+  ROUTES,
+} from "./constants.js";
+
+const {
+  TOKEN: TOKEN_KEY,
+  EMAIL: EMAIL_KEY, // Used through the password reset flow
+  RESET_CODE: RESET_CODE_KEY,
+  SESSION_FLAG: SESSION_FLAG_KEY,
+} = AUTH_STORAGE_KEYS;
 
 // get/set/clear auth session flag (JWT stays in httpOnly cookie; do not store tokens client-side)
 export function setToken(token) {
   localStorage.removeItem(TOKEN_KEY); // ensure legacy token is cleared
-  sessionStorage.setItem(SESSION_FLAG_KEY, "1");
+  sessionStorage.setItem(SESSION_FLAG_KEY, AUTH_SESSION_ACTIVE_VALUE);
 }
 
 export function getToken() {
@@ -23,7 +31,9 @@ export function clearToken() {
 
 // Check if user is authenticated
 export function isAuthenticated() {
-  return sessionStorage.getItem(SESSION_FLAG_KEY) === "1";
+  return (
+    sessionStorage.getItem(SESSION_FLAG_KEY) === AUTH_SESSION_ACTIVE_VALUE
+  );
 }
 
 // Save/get email used in password reset flow
@@ -51,14 +61,14 @@ export function clearResetFlow() {
 }
 
 // Redirect to login if not authenticated
-export function requireAuth(redirectTo = "login.html") {
+export function requireAuth(redirectTo = ROUTES.LOGIN) {
   if (!isAuthenticated()) {
     window.location.href = redirectTo;
   }
 }
 
 // If user already logged in, navigate to home
-export function redirectIfAuthenticated(target = "home.html") {
+export function redirectIfAuthenticated(target = ROUTES.HOME) {
   if (isAuthenticated()) {
     window.location.href = target;
   }

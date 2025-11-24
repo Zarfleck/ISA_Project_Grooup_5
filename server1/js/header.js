@@ -1,6 +1,7 @@
 // Header functionality - logout button and user email display
 import { logout } from "./auth.js";
 import { api } from "./apiClient.js";
+import { UI_STRINGS } from "./constants.js";
 
 function initHeader() {
   // Setup logout button
@@ -21,11 +22,12 @@ function initHeader() {
       .currentUser()
       .then((response) => {
         if (response.success && response.user) {
-          emailPlaceholder.textContent = response.user.email || "User";
+          emailPlaceholder.textContent =
+            response.user.email || UI_STRINGS.HEADER.FALLBACK_USER;
         }
       })
       .catch((error) => {
-        console.warn("Failed to load user info:", error);
+        console.warn(UI_STRINGS.HEADER.LOAD_ERROR_PREFIX, error);
         // Keep default "Email" text if fetch fails
       });
   }

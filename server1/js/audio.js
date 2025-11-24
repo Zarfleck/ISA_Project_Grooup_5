@@ -1,5 +1,7 @@
 // Utility helpers for working with audio data returned by the AI server
 
+import { AUDIO_MIME_TYPES, UI_STRINGS } from "./constants.js";
+
 /**
  * Converts a base64-encoded WAV string into a Blob URL playable by HTMLAudioElement.
  * Returns an object containing both the Blob and the generated object URL so callers
@@ -7,7 +9,7 @@
  */
 export function base64WavToObjectUrl(base64Audio) {
   if (!base64Audio) {
-    throw new Error('No audio data received from synthesis service.');
+    throw new Error(UI_STRINGS.AUDIO.NO_AUDIO);
   }
 
   const byteCharacters = atob(base64Audio);
@@ -17,7 +19,7 @@ export function base64WavToObjectUrl(base64Audio) {
   }
 
   const byteArray = new Uint8Array(byteNumbers);
-  const blob = new Blob([byteArray], { type: 'audio/wav' });
+  const blob = new Blob([byteArray], { type: AUDIO_MIME_TYPES.WAV });
   const objectUrl = URL.createObjectURL(blob);
 
   return { blob, objectUrl };

@@ -5,8 +5,9 @@
 
 import { backendApi } from "./apiClient.js";
 import { setToken, redirectIfAuthenticated } from "./auth.js";
+import { ROUTES, UI_STRINGS } from "./constants.js";
 
-redirectIfAuthenticated("home.html");
+redirectIfAuthenticated(ROUTES.HOME);
 
 const signupForm = document.getElementById("signup-form");
 const emailInput = document.getElementById("email");
@@ -22,11 +23,11 @@ signupForm?.addEventListener("submit", async (e) => {
   const confirm = confirmInput.value;
 
   if (password !== confirm) {
-    messageDiv.innerHTML = `<div class="p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900 dark:text-red-400 rounded-lg" role="alert">Passwords do not match.</div>`;
+    messageDiv.innerHTML = `<div class="p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900 dark:text-red-400 rounded-lg" role="alert">${UI_STRINGS.SIGNUP.PASSWORD_MISMATCH}</div>`;
     return;
   }
 
-  messageDiv.innerHTML = `<div class="p-2 text-sm text-sky-500 dark:text-sky-400 rounded-lg">Registering...</div>`;
+  messageDiv.innerHTML = `<div class="p-2 text-sm text-sky-500 dark:text-sky-400 rounded-lg">${UI_STRINGS.SIGNUP.REGISTERING}</div>`;
 
   if (submitBtn) submitBtn.disabled = true;
   try {
@@ -34,16 +35,16 @@ signupForm?.addEventListener("submit", async (e) => {
     if (respond.success) {
       const token = respond.token || respond.data?.token;
       setToken(token);
-      messageDiv.innerHTML = `<div class="p-2 text-sm text-green-600 bg-green-50 dark:bg-green-900 dark:text-green-400 rounded-lg" role="alert">Success! ${respond.message}</div>`;
+      messageDiv.innerHTML = `<div class="p-2 text-sm text-green-600 bg-green-50 dark:bg-green-900 dark:text-green-400 rounded-lg" role="alert">${UI_STRINGS.SIGNUP.SUCCESS_PREFIX} ${respond.message}</div>`;
       setTimeout(() => {
-        window.location.href = "/views/home.html?authenticated=true";
+        window.location.href = ROUTES.HOME_AUTHENTICATED;
       }, 2000);
     } else {
-      messageDiv.innerHTML = `<div class="p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900 dark:text-red-400 rounded-lg" role="alert">Error: ${respond.message}</div>`;
+      messageDiv.innerHTML = `<div class="p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900 dark:text-red-400 rounded-lg" role="alert">${UI_STRINGS.SIGNUP.ERROR_PREFIX} ${respond.message}</div>`;
     }
   } catch (error) {
     messageDiv.innerHTML = `<div class="p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900 dark:text-red-400 rounded-lg" role="alert">${error}</div>`;
-    console.error("Registration error:", error);
+    console.error(UI_STRINGS.SIGNUP.ERROR_LOG_PREFIX, error);
   } finally {
     if (submitBtn) submitBtn.disabled = false;
   }

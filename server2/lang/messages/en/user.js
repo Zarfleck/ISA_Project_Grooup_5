@@ -129,6 +129,7 @@ const STRINGS = {
     ERROR_SERVER: "Internal server error",
     ERROR_AUTHENTICATION: "Authentication failed",
     ERROR_API_LIMIT: "API call limit exceeded",
+    NOT_FOUND: "Not found",
   },
 
   // Security Messages
@@ -164,6 +165,78 @@ const STRINGS = {
     FIELDS_REQUIRED: "Email and password are required",
     INVALID_CREDENTIALS: "Invalid email or password",
     LOGIN_SUCCESS: "Login successful",
+  },
+
+  LOGOUT: {
+    SUCCESS: "Logged out successfully",
+  },
+
+  ADMIN: {
+    INVALID_USER_ID: "Invalid user ID",
+    CANNOT_DELETE_SELF: "Cannot delete your own account",
+    USER_NOT_FOUND: "User not found",
+    DELETE_SUCCESS: "User deleted successfully",
+    DELETE_FAILURE: "Failed to delete user",
+  },
+
+  API_USAGE: {
+    LIMIT_INCREASED: "API call limit increased",
+    RESET_SUCCESS: "API usage reset successfully",
+    RESET_FAILURE: "Failed to reset API usage",
+  },
+
+  TTS: {
+    TEXT_REQUIRED: "Text is required to synthesize speech",
+    LANGUAGE_REQUIRED: "Language is required to synthesize speech",
+    SERVICE_ERROR: "Text-to-speech service returned an error",
+    PARSE_ERROR_PREFIX: "Failed to parse AI response:",
+  },
+
+  LOGS: {
+    AUTH_ERROR_PREFIX: "Authentication error:",
+    API_LOGGING_ERROR_PREFIX: "API logging error:",
+    ADMIN_AUTH_ERROR_PREFIX: "Admin auth middleware error:",
+    USER_AUTH_ERROR_PREFIX: "User auth middleware error:",
+    DELETE_USER_ERROR_PREFIX: "Delete user endpoint error:",
+    RESET_USAGE_ERROR_PREFIX: "Reset API usage endpoint error:",
+    TTS_PROXY_ERROR_PREFIX: "TTS proxy error:",
+    DB_CONNECT_FAILURE: "Failed to connect to database. Exiting...",
+    SERVER_SHUTDOWN: "Shutting down server...",
+    ADMIN_DASHBOARD_ERROR_PREFIX: "Admin dashboard error:",
+  },
+
+  DATABASE_MESSAGES: {
+    DB_CONFIG_PREFIX: "DB Config:",
+    TABLE_CREATION_ERROR: "Table creation error:",
+    INSERT_USER_ERROR: "Insert user error:",
+    DUPLICATE_EMAIL: "Email already exists",
+    DEFAULT_DATA_INSERTED: (userCount, languageCount) =>
+      `Inserted default data: ${userCount} users, ${languageCount} languages`,
+    LANGUAGE_NOT_FOUND: (code) => `Language code not found: ${code}`,
+    QUERY_EXECUTION_ERROR: "Query execution error:",
+    GET_LANGUAGE_ID_ERROR: "Get language ID error:",
+    GET_ALL_USERS_ERROR: "Get all users error:",
+    GET_ALL_USERS_WITH_USAGE_ERROR: "Get all users with API usage error:",
+    FIND_USER_BY_EMAIL_ERROR: "Find user by email error:",
+    GET_USER_BY_ID_ERROR: "Get user by ID error:",
+    GET_USER_API_USAGE_ERROR: "Get user API usage error:",
+    PASSWORD_VERIFICATION_ERROR: "Password verification error:",
+    PASSWORD_HASHING_ERROR: "Password hashing error:",
+    INCREMENT_API_CALLS_ERROR: "Increment API calls error:",
+    CHECK_API_LIMIT_ERROR: "Check API limit error:",
+    LOG_API_USAGE_SKIP: (code) =>
+      `Skipping API usage log due to missing language ID for code: ${code}`,
+    LOG_API_USAGE_ERROR: "Log API usage error:",
+    LOG_API_USAGE_SUCCESS: (method, endpoint, userId) =>
+      `✓ Logged API call: ${method} ${endpoint} for user ${userId}`,
+    UPDATE_LAST_LOGIN_ERROR: "Update last login error:",
+    SWITCH_TO_ADMIN: "Switched to admin role",
+    SWITCH_TO_USER: "Switched to user role",
+    SWITCH_TO_ADMIN_ERROR: "Error switching to admin role:",
+    SWITCH_TO_USER_ERROR: "Error switching to user role:",
+    RESET_API_USAGE_ERROR: "Reset API usage error:",
+    GET_ENDPOINT_STATS_ERROR: "Get endpoint statistics error:",
+    DELETE_USER_ERROR: "Delete user error:",
   },
 };
 

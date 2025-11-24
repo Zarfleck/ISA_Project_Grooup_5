@@ -17,12 +17,17 @@ import { fileURLToPath } from "url";
 import path, { dirname } from "path";
 import Database from "./database.js";
 import STRINGS from "./lang/messages/en/user.js";
+
 import {
   generateToken,
   verifyToken,
   extractTokenFromCookie,
   extractTokenFromHeader,
 } from "./auth.js";
+
+// Swagger imports
+import swaggerUi from "swagger-ui-express";
+import swaggerJsdoc from "swagger-jsdoc";
 
 // Load environment variables
 dotenv.config({ path: dirname(fileURLToPath(import.meta.url)) + "/.env" });
@@ -33,6 +38,13 @@ const app = express();
 const AI_SERVER_URL =
   process.env.AI_SERVER_URL ||
   "https://effortless-bogus-kaelyn.ngrok-free.dev/api/v1/tts";
+
+// Swagger setup
+const spec = swaggerJsdoc({
+  apis: ["./server.js"], // add JSDoc comments
+  definition: { openapi: "3.0.0", info: { title: "API", version: "1.0.0" } },
+});
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(spec));
 
 // Set EJS as the templating engine
 app.set("view engine", "ejs");
@@ -46,7 +58,9 @@ app.set("trust proxy", 1);
 
 // CORS setup that reflects origin and supports credentials
 const allowedOrigins =
-  process.env.ALLOWED_ORIGINS?.split(",").map((o) => o.trim()).filter(Boolean) || [];
+  process.env.ALLOWED_ORIGINS?.split(",")
+    .map((o) => o.trim())
+    .filter(Boolean) || [];
 const defaultOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:8080",
@@ -95,7 +109,7 @@ export async function authenticateRequest(request) {
 
     return await db.getUserById(decoded.userId);
   } catch (error) {
-    console.error("Authentication error:", error);
+    console.error(STRINGS.LOGS.AUTH_ERROR_PREFIX, error);
     return null;
   }
 }
@@ -126,7 +140,7 @@ export async function requireAdminAuth(request, response, next) {
     request.admin = user; // for backend access
     next();
   } catch (err) {
-    console.error("Admin auth middleware error:", err.message);
+    console.error(STRINGS.LOGS.ADMIN_AUTH_ERROR_PREFIX, err.message);
     response.redirect("/admin/login");
   }
 }
@@ -153,7 +167,7 @@ export async function requireUserAuth(request, response, next) {
     request.user = user;
     next();
   } catch (err) {
-    console.error("User auth middleware error:", err.message);
+    console.error(STRINGS.LOGS.USER_AUTH_ERROR_PREFIX, err.message);
     response.status(500).json({
       success: false,
       message: STRINGS.RESPONSES.ERROR_SERVER,
@@ -169,37 +183,37 @@ const adminRouter = express.Router();
 
 // createApiStatsMiddleware variable is created by Claude Sonnet 4 (https://claude.ai/)
 // Universal API logging middleware factory - creates middleware for any route type
-const createApiStatsMiddleware = (pathPrefix = '') => {
+const createApiStatsMiddleware = (pathPrefix = "") => {
   return async (req, res, next) => {
     // Store original end function
     const originalEnd = res.end;
-    
+
     // Override end function to log after response
-    res.end = function(...args) {
+    res.end = function (...args) {
       // Call original end function first
       originalEnd.apply(this, args);
-      
-      // Log API usage asynchronously (don't block response) 
+
+      // Log API usage asynchronously (don't block response)
       const user = req.user || req.admin; // Works for both user and admin routes
-      if (user && req.path.startsWith('/')) {
+      if (user && req.path.startsWith("/")) {
         // Use setImmediate to avoid blocking the response
         setImmediate(async () => {
           try {
             const fullPath = pathPrefix + req.path;
-            await db.logApiUsage(user.user_id, fullPath, req.method, 'en');
+            await db.logApiUsage(user.user_id, fullPath, req.method, "en");
           } catch (error) {
-            console.error('API logging error:', error.message);
+            console.error(STRINGS.LOGS.API_LOGGING_ERROR_PREFIX, error.message);
           }
         });
       }
     };
-    
+
     next();
   };
 };
 
 // Create admin middleware with /admin prefix
-const adminStatsMiddleware = createApiStatsMiddleware('/admin');
+const adminStatsMiddleware = createApiStatsMiddleware("/admin");
 
 adminRouter.get("/login", (request, response) => {
   response.render("login");
@@ -310,121 +324,136 @@ adminRouter.get("/logout", (request, response) => {
 });
 
 // Admin dashboard route
-adminRouter.get("/dashboard", adminStatsMiddleware, requireAdminAuth, async (request, response) => {
-  try {
-    const users = await db.getAllUsersWithApiUsage();
-    const endpointStats = await db.getEndpointStatistics();
-    
-    response.render("admin-dashboard", {
-      currentAdmin: response.locals.admin,
-      users,
-      endpointStats,
-    });
-  } catch (error) {
-    console.error("Admin dashboard error:", error.message);
-    response.render("admin-dashboard", {
-      currentAdmin: response.locals.admin,
-      users: [],
-      endpointStats: [],
-    });
+adminRouter.get(
+  "/dashboard",
+  adminStatsMiddleware,
+  requireAdminAuth,
+  async (request, response) => {
+    try {
+      const users = await db.getAllUsersWithApiUsage();
+      const endpointStats = await db.getEndpointStatistics();
+
+      response.render("admin-dashboard", {
+        currentAdmin: response.locals.admin,
+        users,
+        endpointStats,
+      });
+    } catch (error) {
+      console.error(STRINGS.LOGS.ADMIN_DASHBOARD_ERROR_PREFIX, error.message);
+      response.render("admin-dashboard", {
+        currentAdmin: response.locals.admin,
+        users: [],
+        endpointStats: [],
+      });
+    }
   }
-});
+);
 
 // DELETE /admin/users/:id - Admin delete user endpoint
-adminRouter.delete("/users/:id", adminStatsMiddleware, requireAdminAuth, async (request, response) => {
-  try {
-    const userId = parseInt(request.params.id);
-    
-    // Validate user ID
-    if (!userId || isNaN(userId)) {
-      return response.status(400).json({
-        success: false,
-        message: "Invalid user ID"
-      });
-    }
+adminRouter.delete(
+  "/users/:id",
+  adminStatsMiddleware,
+  requireAdminAuth,
+  async (request, response) => {
+    try {
+      const userId = parseInt(request.params.id);
 
-    // Prevent admin from deleting themselves
-    if (userId === request.admin.user_id) {
-      return response.status(400).json({
-        success: false,
-        message: "Cannot delete your own account"
-      });
-    }
+      // Validate user ID
+      if (!userId || isNaN(userId)) {
+        return response.status(400).json({
+          success: false,
+          message: STRINGS.ADMIN.INVALID_USER_ID,
+        });
+      }
 
-    // Delete user using database method
-    const result = await db.deleteUser(userId);
+      // Prevent admin from deleting themselves
+      if (userId === request.admin.user_id) {
+        return response.status(400).json({
+          success: false,
+          message: STRINGS.ADMIN.CANNOT_DELETE_SELF,
+        });
+      }
 
-    if (result.success) {
-      return response.status(200).json({
-        success: true,
-        message: result.message
-      });
-    } else {
+      // Delete user using database method
+      const result = await db.deleteUser(userId);
+
+      if (result.success) {
+        return response.status(200).json({
+          success: true,
+          message: result.message,
+        });
+      } else {
+        return response.status(500).json({
+          success: false,
+          message: result.message || STRINGS.RESPONSES.ERROR_SERVER,
+        });
+      }
+    } catch (error) {
+      console.error(STRINGS.LOGS.DELETE_USER_ERROR_PREFIX, error.message);
       return response.status(500).json({
         success: false,
-        message: result.message
+        message: STRINGS.RESPONSES.ERROR_SERVER,
       });
     }
-  } catch (error) {
-    console.error("Delete user endpoint error:", error.message);
-    return response.status(500).json({
-      success: false,
-      message: "Internal server error"
-    });
   }
-});
+);
 
 // PATCH /admin/users/:id/reset-usage - Admin reset user API usage
-adminRouter.patch("/users/:id/reset-usage", adminStatsMiddleware, requireAdminAuth, async (request, response) => {
-  try {
-    const userId = parseInt(request.params.id);
-    
-    // Validate user ID
-    if (!userId || isNaN(userId)) {
-      return response.status(400).json({
-        success: false,
-        message: "Invalid user ID"
-      });
-    }
+adminRouter.patch(
+  "/users/:id/reset-usage",
+  adminStatsMiddleware,
+  requireAdminAuth,
+  async (request, response) => {
+    try {
+      const userId = parseInt(request.params.id);
 
-    // Check if user exists
-    const user = await db.getUserById(userId);
-    if (!user) {
-      return response.status(404).json({
-        success: false,
-        message: "User not found"
-      });
-    }
+      // Validate user ID
+      if (!userId || isNaN(userId)) {
+        return response.status(400).json({
+          success: false,
+          message: STRINGS.ADMIN.INVALID_USER_ID,
+        });
+      }
 
-    // Reset API usage using database method
-    const result = await db.resetUserApiUsage(userId);
+      // Check if user exists
+      const user = await db.getUserById(userId);
+      if (!user) {
+        return response.status(404).json({
+          success: false,
+          message: STRINGS.ADMIN.USER_NOT_FOUND,
+        });
+      }
 
-    if (result.success) {
-      // Get updated usage info
-      const updatedUsage = await db.getUserApiUsage(userId);
-      
-      return response.status(200).json({
-        success: true,
-        message: result.message,
-        apiUsage: {
-          used: updatedUsage.api_calls_used,
-          limit: updatedUsage.api_calls_limit
-        }
-      });
-    } else {
+      // Reset API usage using database method
+      const result = await db.resetUserApiUsage(userId);
+
+      if (result.success) {
+        // Get updated usage info
+        const updatedUsage = await db.getUserApiUsage(userId);
+
+        return response.status(200).json({
+          success: true,
+          message: result.message,
+          apiUsage: {
+            used: updatedUsage.api_calls_used,
+            limit: updatedUsage.api_calls_limit,
+          },
+        });
+      } else {
+        return response.status(500).json({
+          success: false,
+          message: result.message || STRINGS.RESPONSES.ERROR_SERVER,
+        });
+      }
+    } catch (error) {
+      console.error(STRINGS.LOGS.RESET_USAGE_ERROR_PREFIX, error.message);
       return response.status(500).json({
         success: false,
-        message: result.message
+        message: STRINGS.RESPONSES.ERROR_SERVER,
       });
     }
-  } catch (error) {
-    console.error("Reset API usage endpoint error:", error.message);
-    return response.status(500).json({
-      success: false,
-      message: "Internal server error"
-    });
   }
-});
+);
 
 // Mount under /admin
 app.use("/admin", adminRouter);
@@ -435,7 +464,7 @@ app.use("/admin", adminRouter);
 const userRouter = express.Router();
 
 // Create user middleware with no prefix (standard API paths)
-const apiStatsMiddleware = createApiStatsMiddleware('');
+const apiStatsMiddleware = createApiStatsMiddleware("");
 
 // Apply API logging middleware to all user routes
 userRouter.use(apiStatsMiddleware);
@@ -566,107 +595,111 @@ userRouter.get("/auth/me", requireUserAuth, async (request, response) => {
 });
 
 // TTS proxy: authenticate, check quota, call server3, and persist usage
-userRouter.post("/tts/synthesize", requireUserAuth, async (request, response) => {
-  try {
-    const user = request.user; // Set by requireUserAuth middleware
+userRouter.post(
+  "/tts/synthesize",
+  requireUserAuth,
+  async (request, response) => {
+    try {
+      const user = request.user; // Set by requireUserAuth middleware
 
-    const apiLimit = await db.checkApiLimit(user.user_id);
-    const apiUsage = {
-      used: apiLimit.used,
-      limit: apiLimit.limit,
-      remaining: Math.max(apiLimit.limit - apiLimit.used, 0),
-    };
+      const apiLimit = await db.checkApiLimit(user.user_id);
+      const apiUsage = {
+        used: apiLimit.used,
+        limit: apiLimit.limit,
+        remaining: Math.max(apiLimit.limit - apiLimit.used, 0),
+      };
 
-    if (apiLimit.exceeded) {
-      return response.status(429).json({
-        success: false,
-        message: STRINGS.RESPONSES.ERROR_API_LIMIT,
-        apiUsage,
-      });
-    }
+      if (apiLimit.exceeded) {
+        return response.status(429).json({
+          success: false,
+          message: STRINGS.RESPONSES.ERROR_API_LIMIT,
+          apiUsage,
+        });
+      }
 
-    const {
-      text,
-      language = "en",
-      speaker_id: speakerId = "default",
-      speaker_wav_base64: speakerWavBase64,
-      speaker_wav_url: speakerWavUrl,
-    } = request.body || {};
-
-    if (!text) {
-      return response.status(400).json({
-        success: false,
-        message: "Text is required to synthesize speech",
-        apiUsage,
-      });
-    }
-
-    if (!language) {
-      return response.status(400).json({
-        success: false,
-        message: "Language is required to synthesize speech",
-        apiUsage,
-      });
-    }
-
-    const aiResponse = await fetch(`${AI_SERVER_URL}/synthesize`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      const {
         text,
-        language: language,
-        speaker_id: speakerId,
+        language = "en",
+        speaker_id: speakerId = "default",
         speaker_wav_base64: speakerWavBase64,
         speaker_wav_url: speakerWavUrl,
-      }),
-    });
+      } = request.body || {};
 
-    let aiData;
-    try {
-      aiData = await aiResponse.json();
-    } catch (jsonError) {
-      console.error("Failed to parse AI response:", jsonError);
-      aiData = {};
-    }
+      if (!text) {
+        return response.status(400).json({
+          success: false,
+          message: STRINGS.TTS.TEXT_REQUIRED,
+          apiUsage,
+        });
+      }
 
-    if (!aiResponse.ok) {
-      return response.status(aiResponse.status).json({
+      if (!language) {
+        return response.status(400).json({
+          success: false,
+          message: STRINGS.TTS.LANGUAGE_REQUIRED,
+          apiUsage,
+        });
+      }
+
+      const aiResponse = await fetch(`${AI_SERVER_URL}/synthesize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text,
+          language: language,
+          speaker_id: speakerId,
+          speaker_wav_base64: speakerWavBase64,
+          speaker_wav_url: speakerWavUrl,
+        }),
+      });
+
+      let aiData;
+      try {
+        aiData = await aiResponse.json();
+      } catch (jsonError) {
+        console.error(STRINGS.TTS.PARSE_ERROR_PREFIX, jsonError);
+        aiData = {};
+      }
+
+      if (!aiResponse.ok) {
+        return response.status(aiResponse.status).json({
+          success: false,
+          message:
+            aiData?.detail ||
+            aiData?.message ||
+            STRINGS.TTS.SERVICE_ERROR,
+          apiUsage,
+        });
+      }
+
+      await db.incrementApiCalls(user.user_id);
+      await db.logApiUsage(user.user_id, "/tts/synthesize", "POST", language);
+
+      const updatedUsage = await db.getUserApiUsage(user.user_id);
+      const refreshedUsage = {
+        used: updatedUsage.api_calls_used,
+        limit: updatedUsage.api_calls_limit,
+        remaining: Math.max(
+          updatedUsage.api_calls_limit - updatedUsage.api_calls_used,
+          0
+        ),
+      };
+
+      return response.status(200).json({
+        success: true,
+        ...aiData,
+        apiUsage: refreshedUsage,
+      });
+    } catch (error) {
+      console.error(STRINGS.LOGS.TTS_PROXY_ERROR_PREFIX, error);
+      return response.status(500).json({
         success: false,
-        message:
-          aiData?.detail ||
-          aiData?.message ||
-          "Text-to-speech service returned an error",
-        apiUsage,
+        message: STRINGS.RESPONSES.ERROR_SERVER,
+        error: error.message,
       });
     }
-
-    await db.incrementApiCalls(user.user_id);
-    await db.logApiUsage(user.user_id, "/tts/synthesize", "POST", language);
-
-    const updatedUsage = await db.getUserApiUsage(user.user_id);
-    const refreshedUsage = {
-      used: updatedUsage.api_calls_used,
-      limit: updatedUsage.api_calls_limit,
-      remaining: Math.max(
-        updatedUsage.api_calls_limit - updatedUsage.api_calls_used,
-        0
-      ),
-    };
-
-    return response.status(200).json({
-      success: true,
-      ...aiData,
-      apiUsage: refreshedUsage,
-    });
-  } catch (error) {
-    console.error("TTS proxy error:", error);
-    return response.status(500).json({
-      success: false,
-      message: STRINGS.RESPONSES.ERROR_SERVER,
-      error: error.message,
-    });
   }
-});
+);
 
 // Logout route
 userRouter.post("/auth/logout", (request, response) => {
@@ -680,7 +713,7 @@ userRouter.post("/auth/logout", (request, response) => {
 
     return response.status(200).json({
       success: true,
-      message: STRINGS.LOGOUT?.SUCCESS || "Logged out successfully",
+      message: STRINGS.LOGOUT.SUCCESS,
     });
   } catch (error) {
     return response.status(500).json({
@@ -705,7 +738,7 @@ userRouter.post("/usage/increment", async (request, response) => {
     await db.incrementApiCalls(user.user_id);
     return response.status(200).json({
       success: true,
-      message: "API call limit increased",
+      message: STRINGS.API_USAGE.LIMIT_INCREASED,
     });
   } catch (error) {
     return response.status(500).json({
@@ -716,19 +749,21 @@ userRouter.post("/usage/increment", async (request, response) => {
   }
 });
 
-// Mount under /api
-app.use("/api", userRouter);
+// Mount under /api/v1
+app.use("/api/v1", userRouter);
 
-// 404 Handler
-app.use((req, res) => {
-  res.status(404).render("404", { title: "Page Not Found" });
-});
+// 404 handler
+app.use((req, res) =>
+  res
+    .status(404)
+    .json({ success: false, message: STRINGS.RESPONSES.NOT_FOUND })
+);
 
 // Start server after DB connects
 async function start() {
   const connected = await db.connect();
   if (!connected) {
-    console.error("Failed to connect to database. Exiting...");
+    console.error(STRINGS.LOGS.DB_CONNECT_FAILURE);
     process.exit(1);
   }
 
@@ -738,7 +773,7 @@ async function start() {
 }
 
 process.on("SIGINT", async () => {
-  console.log("Shutting down server...");
+  console.log(STRINGS.LOGS.SERVER_SHUTDOWN);
   await db.close();
   process.exit(0);
 });

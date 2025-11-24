@@ -10,20 +10,21 @@ import {
   hideApiLimitWarning,
 } from "./apiClient.js";
 import { base64WavToObjectUrl } from "./audio.js";
+import { AUTH_STORAGE_KEYS, EVENTS, ROUTES, UI_STRINGS } from "./constants.js";
 
 let apiUsageState = null;
 
-requireAuth("login.html"); // Check if we have *any* token?
+requireAuth(ROUTES.LOGIN); // Check if we have *any* token?
 
 // Listen to the header inclusion event and attach logout handler
-document.addEventListener("includesLoaded", async () => {
+document.addEventListener(EVENTS.INCLUDES_LOADED, async () => {
   // Attach logout handler
   const logoutBtn = document.getElementById("logout-btn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
       logout();
-      localStorage.removeItem("auth_token");
-      window.location.href = "/views/login.html";
+      localStorage.removeItem(AUTH_STORAGE_KEYS.TOKEN);
+      window.location.href = ROUTES.LOGIN;
     });
   }
 
@@ -31,15 +32,15 @@ document.addEventListener("includesLoaded", async () => {
   try {
     const currentUser = await backendApi.currentUser();
     const currentUserInfo = currentUser.user;
-    console.log("Current user:", currentUser);
+    console.log(UI_STRINGS.HOME.CURRENT_USER_PREFIX, currentUser);
     const emailPlaceholder = document.getElementById("user-email-placeholder");
     if (emailPlaceholder) {
       emailPlaceholder.textContent = currentUserInfo.email;
     }
   } catch (err) {
-    console.warn("Token invalid or expired:", err.message);
+    console.warn(UI_STRINGS.HOME.TOKEN_EXPIRED_PREFIX, err.message);
     clearToken();
-    window.location.href = "/views/login.html";
+    window.location.href = ROUTES.LOGIN;
   }
 });
 
@@ -48,10 +49,10 @@ async function logout() {
   try {
     await backendApi.logout?.();
   } catch (err) {
-    console.warn("Logout API call failed:", err.message);
+    console.warn(UI_STRINGS.HOME.LOGOUT_FAILURE_PREFIX, err.message);
   } finally {
     clearToken();
-    window.location.href = "/views/login.html";
+    window.location.href = ROUTES.LOGIN;
   }
 }
 
@@ -91,7 +92,7 @@ function renderApiUsageBanner(rawUsage) {
   }
 
   usageContainer.classList.remove("hidden");
-  usageText.textContent = `used ${usage.used} of ${usage.limit} AI API calls used. (${usage.remaining} remaining)`;
+  usageText.textContent = UI_STRINGS.HOME.API_USAGE_TEXT(usage);
 
   if (usage.remaining <= 0) {
     submitButton?.setAttribute("disabled", true);
@@ -126,7 +127,7 @@ async function checkCurrentUser() {
       hideApiLimitWarning();
     }
   } catch (err) {
-    console.warn("Failed to fetch user info:", err);
+    console.warn(UI_STRINGS.HOME.FETCH_USER_FAILURE_PREFIX, err);
   }
 }
 
@@ -153,7 +154,7 @@ function initializeTextToSpeechForm() {
     !audioStatus ||
     !downloadLink
   ) {
-    console.error("Required DOM elements for text-to-speech are missing.");
+    console.error(UI_STRINGS.HOME.MISSING_DOM);
     return;
   }
 
@@ -214,10 +215,11 @@ function initializeTextToSpeechForm() {
         audioCard.classList.add(...ENABLED_CLASSES);
         audioStatus.classList.add("text-sky-700", "dark:text-sky-300");
         audioStatus.textContent =
-          message || "Playback ready. Click play to listen.";
+          message || UI_STRINGS.HOME.PLAYER_READY;
         if (audioUrl) {
           downloadLink.href = audioUrl;
-          downloadLink.download = downloadName || "generated_speech.wav";
+          downloadLink.download =
+            downloadName || UI_STRINGS.HOME.DOWNLOAD_FALLBACK;
           downloadLink.classList.remove("hidden");
         }
         break;
@@ -228,7 +230,8 @@ function initializeTextToSpeechForm() {
         audioControls.load();
         audioCard.classList.add(...DISABLED_CLASSES);
         audioStatus.classList.add("text-gray-500", "dark:text-gray-400");
-        audioStatus.textContent = message || "Generating audio, please wait...";
+        audioStatus.textContent =
+          message || UI_STRINGS.HOME.PLAYER_LOADING;
         break;
       }
       case "error": {
@@ -244,7 +247,7 @@ function initializeTextToSpeechForm() {
         );
         audioStatus.classList.add("text-red-600", "dark:text-red-300");
         audioStatus.textContent =
-          message || "Failed to generate audio. Please try again.";
+          message || UI_STRINGS.HOME.PLAYER_ERROR;
         break;
       }
       case "disabled":
@@ -255,8 +258,7 @@ function initializeTextToSpeechForm() {
         audioCard.classList.add(...DISABLED_CLASSES);
         audioStatus.classList.add("text-gray-500", "dark:text-gray-400");
         audioStatus.textContent =
-          message ||
-          "Audio is currently disabled. Generate speech to enable playback.";
+          message || UI_STRINGS.HOME.PLAYER_DISABLED;
         break;
       }
     }
@@ -283,20 +285,20 @@ function initializeTextToSpeechForm() {
     ) {
       showApiLimitWarning();
       setAudioPlayerState("error", {
-        message: "You have reached your API call limit.",
+        message: UI_STRINGS.HOME.API_LIMIT_REACHED,
       });
       return;
     }
 
     if (!text) {
       setAudioPlayerState("error", {
-        message: "Please enter some text to synthesize.",
+        message: UI_STRINGS.HOME.ENTER_TEXT,
       });
       return;
     }
 
     submitButton.disabled = true;
-    submitButton.textContent = "Generating...";
+    submitButton.textContent = UI_STRINGS.HOME.BUTTON_GENERATING;
     setAudioPlayerState("loading");
 
     try {
@@ -318,7 +320,7 @@ function initializeTextToSpeechForm() {
       }
 
       if (!audioBase64) {
-        throw new Error("No audio data returned from synthesis service.");
+        throw new Error(UI_STRINGS.HOME.MISSING_AUDIO_DATA);
       }
 
       const { objectUrl } = base64WavToObjectUrl(audioBase64);
@@ -327,13 +329,13 @@ function initializeTextToSpeechForm() {
 
       setAudioPlayerState("ready", {
         audioUrl: objectUrl,
-        message: "Playback ready. Click play to listen.",
+        message: UI_STRINGS.HOME.PLAYER_READY,
         downloadName: `tts-${Date.now()}.wav`,
       });
     } catch (error) {
-      console.error("Failed to synthesize speech:", error);
+      console.error(UI_STRINGS.HOME.SYNTHESIS_FAILURE_PREFIX, error);
       const message =
-        error?.message || "Failed to generate audio. Please try again.";
+        error?.message || UI_STRINGS.HOME.PLAYER_ERROR;
       setAudioPlayerState("error", { message });
       if (error?.data?.apiUsage) {
         renderApiUsageBanner(error.data.apiUsage);
@@ -343,7 +345,7 @@ function initializeTextToSpeechForm() {
       }
     } finally {
       submitButton.disabled = apiUsageState?.remaining <= 0;
-      submitButton.textContent = "Create Speech (Audio)";
+      submitButton.textContent = UI_STRINGS.HOME.BUTTON_DEFAULT;
     }
   });
   window.addEventListener("beforeunload", () => {
