@@ -97,7 +97,14 @@ async function makeRequest(
   }
 
   // Check for API limit warning and show it
-  if (data.user?.apiLimitExceeded) {
+  if (data.warning) {
+    showApiLimitWarning(data.warning);
+  } else if (
+    data.apiLimitExceeded ||
+    data.user?.apiLimitExceeded ||
+    data.apiUsage?.limitExceeded ||
+    (data.apiUsage?.remaining !== undefined && data.apiUsage.remaining <= 0)
+  ) {
     showApiLimitWarning();
   }
 

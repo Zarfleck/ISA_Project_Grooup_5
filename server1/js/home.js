@@ -71,6 +71,10 @@ function normalizeApiUsage(usage) {
     used: usedNumber,
     limit: limitNumber,
     remaining: Math.max(limitNumber - usedNumber, 0),
+    limitExceeded:
+      usage.limitExceeded ??
+      usage.apiLimitExceeded ??
+      usedNumber >= limitNumber,
   };
 }
 
@@ -82,27 +86,27 @@ function renderApiUsageBanner(rawUsage) {
   const usageText = document.getElementById("api-usage-text");
   const submitButton = document.getElementById("create-speech-button");
 
+  const limitReached =
+    usage?.limitExceeded || (usage?.remaining ?? 1) <= 0;
+
   if (!usageContainer || !usageText) return usage;
 
   if (!usage) {
     usageContainer.classList.add("hidden");
     submitButton?.removeAttribute("disabled");
     submitButton?.classList.remove("cursor-not-allowed", "opacity-50");
+    hideApiLimitWarning();
     return usage;
   }
 
   usageContainer.classList.remove("hidden");
   usageText.textContent = UI_STRINGS.HOME.API_USAGE_TEXT(usage);
 
-  if (usage.remaining <= 0) {
-    submitButton?.setAttribute("disabled", true);
-    submitButton?.classList.add("cursor-not-allowed", "opacity-50");
-    showApiLimitWarning();
-  } else {
-    submitButton?.removeAttribute("disabled");
-    submitButton?.classList.remove("cursor-not-allowed", "opacity-50");
-    hideApiLimitWarning();
-  }
+  submitButton?.removeAttribute("disabled");
+  submitButton?.classList.remove("cursor-not-allowed", "opacity-50");
+
+  if (limitReached) showApiLimitWarning();
+  else hideApiLimitWarning();
 
   return usage;
 }
@@ -117,10 +121,14 @@ async function checkCurrentUser() {
   try {
     const currentUser = await backendApi.currentUser();
     const usage = renderApiUsageBanner(currentUser.user);
+    const limitReached =
+      currentUser.user?.apiLimitExceeded ||
+      usage?.limitExceeded ||
+      (usage?.remaining ?? 1) <= 0;
     if (
       currentUser.success &&
       currentUser.user &&
-      (currentUser.user.apiLimitExceeded || usage?.remaining <= 0)
+      limitReached
     ) {
       showApiLimitWarning();
     } else {
@@ -278,23 +286,27 @@ function initializeTextToSpeechForm() {
 
     const text = textInput.value.trim();
     const language = languageSelect.value.trim().toLowerCase();
-
-    if (
-      apiUsageState?.remaining !== undefined &&
-      apiUsageState.remaining <= 0
-    ) {
-      showApiLimitWarning();
-      setAudioPlayerState("error", {
-        message: UI_STRINGS.HOME.API_LIMIT_REACHED,
-      });
-      return;
-    }
+    const limitReached =
+      apiUsageState?.limitExceeded ||
+      (apiUsageState?.remaining !== undefined &&
+        apiUsageState.remaining <= 0);
 
     if (!text) {
       setAudioPlayerState("error", {
         message: UI_STRINGS.HOME.ENTER_TEXT,
       });
       return;
+    }
+
+    if (limitReached) {
+      showApiLimitWarning(UI_STRINGS.HOME.API_LIMIT_REACHED);
+      const proceed = window.confirm(UI_STRINGS.HOME.API_LIMIT_CONFIRM);
+      if (!proceed) {
+        setAudioPlayerState("error", {
+          message: UI_STRINGS.HOME.API_LIMIT_REACHED,
+        });
+        return;
+      }
     }
 
     submitButton.disabled = true;
@@ -344,7 +356,8 @@ function initializeTextToSpeechForm() {
         showApiLimitWarning();
       }
     } finally {
-      submitButton.disabled = apiUsageState?.remaining <= 0;
+      submitButton.disabled = false;
+      submitButton.classList.remove("cursor-not-allowed", "opacity-50");
       submitButton.textContent = UI_STRINGS.HOME.BUTTON_DEFAULT;
     }
   });

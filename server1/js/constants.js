@@ -1,8 +1,8 @@
 // Local backend server (cannot use env vars in frontend)
-// const API_HOST = "http://localhost:3000";
+const API_HOST = "http://localhost:3000";
 
-// Deployed Backend server
-const API_HOST = "https://comp4537-group5-9lwth.ondigitalocean.app";
+// // Deployed Backend server
+// const API_HOST = "https://comp4537-group5-9lwth.ondigitalocean.app";
 
 export const BACKEND_SERVER_URL = `${API_HOST}/api/v1`;
 export const ADMIN_SERVER_URL = `${API_HOST}/admin`;

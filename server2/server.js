@@ -1142,15 +1142,8 @@ userRouter.post(
         used: apiLimit.used,
         limit: apiLimit.limit,
         remaining: Math.max(apiLimit.limit - apiLimit.used, 0),
+        limitExceeded: apiLimit.exceeded,
       };
-
-      if (apiLimit.exceeded) {
-        return response.status(429).json({
-          success: false,
-          message: STRINGS.RESPONSES.ERROR_API_LIMIT,
-          apiUsage,
-        });
-      }
 
       const {
         text,
@@ -1165,6 +1158,10 @@ userRouter.post(
           success: false,
           message: STRINGS.TTS.TEXT_REQUIRED,
           apiUsage,
+          apiLimitExceeded: apiLimit.exceeded,
+          ...(apiLimit.exceeded
+            ? { warning: STRINGS.RESPONSES.ERROR_API_LIMIT }
+            : {}),
         });
       }
 
@@ -1173,6 +1170,10 @@ userRouter.post(
           success: false,
           message: STRINGS.TTS.LANGUAGE_REQUIRED,
           apiUsage,
+          apiLimitExceeded: apiLimit.exceeded,
+          ...(apiLimit.exceeded
+            ? { warning: STRINGS.RESPONSES.ERROR_API_LIMIT }
+            : {}),
         });
       }
 
@@ -1202,6 +1203,10 @@ userRouter.post(
           message:
             aiData?.detail || aiData?.message || STRINGS.TTS.SERVICE_ERROR,
           apiUsage,
+          apiLimitExceeded: apiLimit.exceeded,
+          ...(apiLimit.exceeded
+            ? { warning: STRINGS.RESPONSES.ERROR_API_LIMIT }
+            : {}),
         });
       }
 
@@ -1216,12 +1221,19 @@ userRouter.post(
           updatedUsage.api_calls_limit - updatedUsage.api_calls_used,
           0
         ),
+        limitExceeded: updatedUsage.api_calls_used >= updatedUsage.api_calls_limit,
       };
+      const usageLimitExceeded =
+        refreshedUsage.limitExceeded || refreshedUsage.remaining <= 0;
 
       return response.status(200).json({
         success: true,
         ...aiData,
         apiUsage: refreshedUsage,
+        apiLimitExceeded: usageLimitExceeded,
+        ...(usageLimitExceeded
+          ? { warning: STRINGS.RESPONSES.ERROR_API_LIMIT }
+          : {}),
       });
     } catch (error) {
       console.error(STRINGS.LOGS.TTS_PROXY_ERROR_PREFIX, error);
