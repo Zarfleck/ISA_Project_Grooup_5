@@ -26,8 +26,6 @@ import {
   extractTokenFromHeader,
 } from "./auth.js";
 import { setTokenCookie } from "./utils/cookies.js";
-import { createAdminRouter } from "./routes/admin.js";
-import { createUserRouter } from "./routes/user.js";
 
 // Swagger imports
 import swaggerUi from "swagger-ui-express";
@@ -353,9 +351,6 @@ export async function requireUserAuth(request, response, next) {
 /**
  * ADMIN ROUTES
  */
-const adminRouter = createAdminRouter(
-  db,
-  STRINGS,
 const adminRouter = express.Router();
 
 // createApiStatsMiddleware variable is created by Claude Sonnet 4 (https://claude.ai/)
@@ -869,9 +864,6 @@ app.use("/admin", adminRouter);
 /**
  * USER ROUTES
  */
-const userRouter = createUserRouter(
-  db,
-  STRINGS,
 const userRouter = express.Router();
 
 // Create user middleware with no prefix (standard API paths)
@@ -1141,9 +1133,6 @@ userRouter.get("/auth/me", requireUserAuth, async (request, response) => {
 userRouter.post(
   "/tts/synthesize",
   requireUserAuth,
-  authenticateRequest,
-  AI_SERVER_URL
-);
   async (request, response) => {
     try {
       const user = request.user; // Set by requireUserAuth middleware
