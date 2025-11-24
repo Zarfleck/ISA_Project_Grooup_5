@@ -7,6 +7,7 @@ Claude Sonnet 4 (https://claude.ai/) was used to generate the following code sol
 
     3. Database Integration - The server startup sequence with database connection validation and graceful shutdown handling.
 
+GPT-4o (ChatGPT) helped set up Swagger documentation and configuration.
 */
 
 import express from "express";
@@ -30,7 +31,8 @@ import swaggerUi from "swagger-ui-express";
 import swaggerJsdoc from "swagger-jsdoc";
 
 // Load environment variables
-dotenv.config({ path: dirname(fileURLToPath(import.meta.url)) + "/.env" });
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 const app = express();
 
@@ -40,11 +42,187 @@ const AI_SERVER_URL =
   "https://effortless-bogus-kaelyn.ngrok-free.dev/api/v1/tts";
 
 // Swagger setup
-const spec = swaggerJsdoc({
-  apis: ["./server.js"], // add JSDoc comments
-  definition: { openapi: "3.0.0", info: { title: "API", version: "1.0.0" } },
+const swaggerDefinition = {
+  openapi: "3.0.0",
+  info: {
+    title: "TTS API",
+    version: "1.0.0",
+    description:
+      "Authentication, admin controls, quota tracking, and text-to-speech proxy endpoints.",
+  },
+  tags: [
+    {
+      name: "User Auth",
+      description: "Signup, login, and session lookups for end users.",
+    },
+    {
+      name: "Usage",
+      description: "API quota helpers and usage counters.",
+    },
+    {
+      name: "Text to Speech",
+      description: "Voice synthesis proxy to the AI service.",
+    },
+    {
+      name: "Admin",
+      description: "Admin authentication and user management.",
+    },
+  ],
+  components: {
+    securitySchemes: {
+      CookieAuth: {
+        type: "apiKey",
+        in: "cookie",
+        name: "token",
+        description: "JWT issued on login or signup.",
+      },
+    },
+    schemas: {
+      AuthCredentials: {
+        type: "object",
+        required: ["email", "password"],
+        properties: {
+          email: {
+            type: "string",
+            format: "email",
+            example: "user@example.com",
+          },
+          password: {
+            type: "string",
+            format: "password",
+            example: "P@ssw0rd!",
+          },
+        },
+      },
+      UserProfile: {
+        type: "object",
+        properties: {
+          userId: { type: "integer", example: 12 },
+          email: { type: "string", format: "email" },
+          apiCallsUsed: { type: "integer", example: 3 },
+          apiCallsLimit: { type: "integer", example: 20 },
+          apiLimitExceeded: { type: "boolean", example: false },
+        },
+      },
+      ApiUsage: {
+        type: "object",
+        properties: {
+          used: { type: "integer", example: 2 },
+          limit: { type: "integer", example: 20 },
+          remaining: { type: "integer", example: 18 },
+        },
+      },
+      SignupResponse: {
+        type: "object",
+        properties: {
+          success: { type: "boolean", example: true },
+          message: { type: "string", example: "User registered successfully" },
+          userId: { type: "integer", example: 42 },
+        },
+      },
+      LoginResponse: {
+        type: "object",
+        properties: {
+          success: { type: "boolean", example: true },
+          message: { type: "string" },
+          user: {
+            type: "object",
+            properties: {
+              userId: { type: "integer" },
+              email: { type: "string", format: "email" },
+              apiCallsUsed: { type: "integer" },
+              apiCallsLimit: { type: "integer" },
+            },
+          },
+        },
+      },
+      MeResponse: {
+        type: "object",
+        properties: {
+          success: { type: "boolean", example: true },
+          user: { $ref: "#/components/schemas/UserProfile" },
+        },
+      },
+      MessageResponse: {
+        type: "object",
+        properties: {
+          success: { type: "boolean", example: true },
+          message: { type: "string" },
+        },
+      },
+      TtsRequest: {
+        type: "object",
+        required: ["text"],
+        properties: {
+          text: { type: "string", example: "Hello from the API" },
+          language: { type: "string", default: "en" },
+          speaker_id: { type: "string", example: "default" },
+          speaker_wav_base64: {
+            type: "string",
+            description: "Override speaker with a base64 encoded WAV clip.",
+          },
+          speaker_wav_url: {
+            type: "string",
+            format: "uri",
+            description: "External WAV file to clone a voice.",
+          },
+        },
+      },
+      TtsResponse: {
+        type: "object",
+        properties: {
+          success: { type: "boolean", example: true },
+          format: { type: "string", example: "wav" },
+          audio_base64: {
+            type: "string",
+            description: "Base64 encoded audio payload.",
+          },
+          duration_seconds: { type: "number", nullable: true, example: 1.4 },
+          sample_rate: { type: "integer", example: 24000 },
+          apiUsage: { $ref: "#/components/schemas/ApiUsage" },
+        },
+      },
+      ResetUsageResponse: {
+        type: "object",
+        properties: {
+          success: { type: "boolean", example: true },
+          message: { type: "string" },
+          apiUsage: {
+            type: "object",
+            properties: {
+              used: { type: "integer", example: 0 },
+              limit: { type: "integer", example: 20 },
+            },
+          },
+        },
+      },
+      ErrorResponse: {
+        type: "object",
+        properties: {
+          success: { type: "boolean", example: false },
+          message: { type: "string" },
+          error: { type: "string" },
+          apiUsage: { $ref: "#/components/schemas/ApiUsage" },
+        },
+      },
+    },
+  },
+};
+
+const swaggerSpec = swaggerJsdoc({
+  apis: [path.join(__dirname, "*.js")],
+  definition: swaggerDefinition,
 });
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(spec));
+
+// Serve Swagger UI and raw JSON for troubleshooting
+app.use(
+  "/docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, { explorer: true })
+);
+app.get("/docs.json", (_req, res) =>
+  res.type("application/json").send(swaggerSpec)
+);
 
 // Set EJS as the templating engine
 app.set("view engine", "ejs");
@@ -219,6 +397,38 @@ adminRouter.get("/login", (request, response) => {
   response.render("login");
 });
 
+/**
+ * @swagger
+ * /admin/login:
+ *   post:
+ *     summary: Authenticate an admin and issue a JWT cookie.
+ *     tags: [Admin]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/AuthCredentials"
+ *     responses:
+ *       200:
+ *         description: Admin authenticated.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/LoginResponse"
+ *       400:
+ *         description: Missing required fields.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       401:
+ *         description: Invalid admin credentials.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ */
 adminRouter.post("/login", async (request, response) => {
   try {
     const { email, password } = request.body || {};
@@ -273,6 +483,38 @@ adminRouter.get("/add-admin", (request, response) => {
   response.render("add-admin");
 });
 
+/**
+ * @swagger
+ * /admin/add-admin:
+ *   post:
+ *     summary: Create a new admin user.
+ *     tags: [Admin]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/AuthCredentials"
+ *     responses:
+ *       200:
+ *         description: Admin account created.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/SignupResponse"
+ *       400:
+ *         description: Missing fields or duplicate email.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       500:
+ *         description: Database or server error while creating the admin.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ */
 adminRouter.post("/add-admin", async (request, response) => {
   try {
     const { email, password } = request.body || {};
@@ -350,6 +592,53 @@ adminRouter.get(
 );
 
 // DELETE /admin/users/:id - Admin delete user endpoint
+/**
+ * @swagger
+ * /admin/users/{id}:
+ *   delete:
+ *     summary: Delete a non-admin user account.
+ *     tags: [Admin]
+ *     security:
+ *       - CookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the user to delete.
+ *     responses:
+ *       200:
+ *         description: User deleted.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/MessageResponse"
+ *       400:
+ *         description: Invalid or missing user id.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       401:
+ *         description: Missing or invalid admin session.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       403:
+ *         description: Attempt to delete an admin account.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       404:
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ */
 adminRouter.delete(
   "/users/:id",
   adminStatsMiddleware,
@@ -416,6 +705,47 @@ adminRouter.delete(
 );
 
 // PATCH /admin/users/:id/reset-usage - Admin reset user API usage
+/**
+ * @swagger
+ * /admin/users/{id}/reset-usage:
+ *   patch:
+ *     summary: Reset a user's API usage counters.
+ *     tags: [Admin]
+ *     security:
+ *       - CookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: User ID whose usage will be reset.
+ *     responses:
+ *       200:
+ *         description: Usage counters reset.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ResetUsageResponse"
+ *       400:
+ *         description: Invalid user id provided.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       401:
+ *         description: Missing or invalid admin session.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       404:
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ */
 adminRouter.patch(
   "/users/:id/reset-usage",
   adminStatsMiddleware,
@@ -487,6 +817,38 @@ const apiStatsMiddleware = createApiStatsMiddleware("");
 userRouter.use(apiStatsMiddleware);
 
 // Signup route
+/**
+ * @swagger
+ * /api/v1/auth/signup:
+ *   post:
+ *     summary: Register a new user account and issue a JWT cookie.
+ *     tags: [User Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/AuthCredentials"
+ *     responses:
+ *       200:
+ *         description: User created.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/SignupResponse"
+ *       400:
+ *         description: Missing fields or email already exists.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       500:
+ *         description: Database or server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ */
 userRouter.post("/auth/signup", async (request, response) => {
   try {
     const { email, password } = request.body || {};
@@ -532,6 +894,38 @@ userRouter.post("/auth/signup", async (request, response) => {
 });
 
 // Login route
+/**
+ * @swagger
+ * /api/v1/auth/login:
+ *   post:
+ *     summary: Authenticate an existing user and issue a JWT cookie.
+ *     tags: [User Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/AuthCredentials"
+ *     responses:
+ *       200:
+ *         description: User authenticated.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/LoginResponse"
+ *       400:
+ *         description: Missing email or password.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       401:
+ *         description: Invalid credentials.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ */
 userRouter.post("/auth/login", async (request, response) => {
   try {
     const { email, password } = request.body || {};
@@ -585,6 +979,28 @@ userRouter.post("/auth/login", async (request, response) => {
 });
 
 // Current user info route
+/**
+ * @swagger
+ * /api/v1/auth/me:
+ *   get:
+ *     summary: Fetch the currently authenticated user's profile and quota.
+ *     tags: [User Auth]
+ *     security:
+ *       - CookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Authenticated user info.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/MeResponse"
+ *       401:
+ *         description: Missing or invalid session.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ */
 userRouter.get("/auth/me", requireUserAuth, async (request, response) => {
   try {
     const user = request.user; // Set by requireUserAuth middleware
@@ -612,6 +1028,52 @@ userRouter.get("/auth/me", requireUserAuth, async (request, response) => {
 });
 
 // TTS proxy: authenticate, check quota, call server3, and persist usage
+/**
+ * @swagger
+ * /api/v1/tts/synthesize:
+ *   post:
+ *     summary: Convert text to speech via the AI proxy while enforcing quotas.
+ *     tags: [Text to Speech]
+ *     security:
+ *       - CookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/TtsRequest"
+ *     responses:
+ *       200:
+ *         description: Audio generated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/TtsResponse"
+ *       400:
+ *         description: Missing text or language.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       401:
+ *         description: Missing or invalid user session.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       429:
+ *         description: API quota exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       503:
+ *         description: Upstream TTS service unavailable.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ */
 userRouter.post(
   "/tts/synthesize",
   requireUserAuth,
@@ -682,9 +1144,7 @@ userRouter.post(
         return response.status(aiResponse.status).json({
           success: false,
           message:
-            aiData?.detail ||
-            aiData?.message ||
-            STRINGS.TTS.SERVICE_ERROR,
+            aiData?.detail || aiData?.message || STRINGS.TTS.SERVICE_ERROR,
           apiUsage,
         });
       }
@@ -719,6 +1179,28 @@ userRouter.post(
 );
 
 // Logout route
+/**
+ * @swagger
+ * /api/v1/auth/logout:
+ *   post:
+ *     summary: Clear the JWT cookie for the current session.
+ *     tags: [User Auth]
+ *     security:
+ *       - CookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Session cleared.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/MessageResponse"
+ *       500:
+ *         description: Server error clearing the session.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ */
 userRouter.post("/auth/logout", (request, response) => {
   try {
     response.clearCookie("token", {
@@ -742,6 +1224,34 @@ userRouter.post("/auth/logout", (request, response) => {
 });
 
 // Increase API call route temporarily used for testing (behaving differently between prod and dev)
+/**
+ * @swagger
+ * /api/v1/usage/increment:
+ *   post:
+ *     summary: Increment the calling user's API usage counter (testing helper).
+ *     tags: [Usage]
+ *     security:
+ *       - CookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Usage counter incremented.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/MessageResponse"
+ *       401:
+ *         description: Not authenticated.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       500:
+ *         description: Server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ */
 userRouter.post("/usage/increment", async (request, response) => {
   try {
     const user = await authenticateRequest(request);
@@ -771,9 +1281,7 @@ app.use("/api/v1", userRouter);
 
 // 404 handler
 app.use((req, res) =>
-  res
-    .status(404)
-    .json({ success: false, message: STRINGS.RESPONSES.NOT_FOUND })
+  res.status(404).json({ success: false, message: STRINGS.RESPONSES.NOT_FOUND })
 );
 
 // Start server after DB connects
