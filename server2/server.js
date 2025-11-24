@@ -227,10 +227,6 @@ app.get("/docs.json", (_req, res) =>
   res.type("application/json").send(swaggerSpec)
 );
 
-// Set EJS as the templating engine
-app.set("view engine", "ejs");
-app.set("views", path.join(process.cwd(), "views"));
-
 app.use(express.json());
 app.use(cookieParser());
 
@@ -291,12 +287,22 @@ export async function requireAdminAuth(request, response, next) {
       request.cookies?.token ||
       extractTokenFromCookie(request.headers.cookie) ||
       extractTokenFromHeader(request.headers.authorization);
-    if (!token) return response.redirect("/admin/login");
+    if (!token) {
+      return response.status(401).json({
+        success: false,
+        message: STRINGS.RESPONSES.ERROR_AUTHENTICATION,
+      });
+    }
 
     const decoded = verifyToken(token);
     const user = await db.findUserByEmail(decoded.email);
 
-    if (!user || !user.is_admin) return response.redirect("/admin/login");
+    if (!user || !user.is_admin) {
+      return response.status(401).json({
+        success: false,
+        message: STRINGS.RESPONSES.ERROR_AUTHENTICATION,
+      });
+    }
 
     // Switch to admin role for admin operations
     await db.switchToAdminRole();
@@ -304,19 +310,18 @@ export async function requireAdminAuth(request, response, next) {
     // Make admin info available in views
     response.locals.admin = {
       email: user.email,
+      user_id: user.user_id,
     };
 
     request.admin = user; // for backend access
     next();
   } catch (err) {
     console.error(STRINGS.LOGS.ADMIN_AUTH_ERROR_PREFIX, err.message);
-    response.redirect("/admin/login");
+    response.status(500).json({
+      success: false,
+      message: STRINGS.RESPONSES.ERROR_SERVER,
+    });
   }
-}
-
-export function redirectIfAuthenticated(req, res, next) {
-  if (req.cookies?.token) return res.redirect("/admin/dashboard");
-  next();
 }
 
 // Middleware for user route protection
@@ -387,8 +392,11 @@ const createApiStatsMiddleware = (pathPrefix = "") => {
 // Create admin middleware with /admin prefix
 const adminStatsMiddleware = createApiStatsMiddleware("/admin");
 
-adminRouter.get("/login", (request, response) => {
-  response.render("login");
+adminRouter.get("/login", (_request, response) => {
+  response.status(200).json({
+    success: true,
+    message: "Admin login endpoint. POST credentials to authenticate.",
+  });
 });
 
 /**
@@ -468,13 +476,20 @@ adminRouter.post("/login", async (request, response) => {
   }
 });
 
-adminRouter.get("/", redirectIfAuthenticated, (request, response) => {
-  response.redirect("/admin/login");
+adminRouter.get("/", (_request, response) => {
+  response.status(200).json({
+    success: true,
+    message: "Admin API root. POST to /admin/login to begin.",
+  });
 });
 
 // Add new admin route
-adminRouter.get("/add-admin", (request, response) => {
-  response.render("add-admin");
+adminRouter.get("/add-admin", (_request, response) => {
+  response.status(200).json({
+    success: true,
+    message:
+      "Send POST /admin/add-admin with email and password to create an admin.",
+  });
 });
 
 /**
@@ -556,32 +571,82 @@ adminRouter.get("/logout", (request, response) => {
     sameSite: "None",
     path: "/",
   });
-  response.redirect("/admin/login");
+  return response.status(200).json({
+    success: true,
+    message: STRINGS.LOGOUT.SUCCESS,
+  });
 });
 
 // Admin dashboard route
+/**
+ * @swagger
+ * /admin/dashboard:
+ *   get:
+ *     summary: Fetch admin dashboard data (users and API usage stats).
+ *     tags: [Admin]
+ *     security:
+ *       - CookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard data for the authenticated admin.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 admin:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: integer
+ *                     email:
+ *                       type: string
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 endpointStats:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       401:
+ *         description: Missing or invalid admin session.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       500:
+ *         description: Server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ */
 adminRouter.get(
   "/dashboard",
   adminStatsMiddleware,
   requireAdminAuth,
-  redirectIfAuthenticated
-);
   async (request, response) => {
     try {
       const users = await db.getAllUsersWithApiUsage();
       const endpointStats = await db.getEndpointStatistics();
 
-      response.render("admin-dashboard", {
-        currentAdmin: response.locals.admin,
+      return response.status(200).json({
+        success: true,
+        admin: {
+          userId: request.admin?.user_id,
+          email: request.admin?.email,
+        },
         users,
         endpointStats,
       });
     } catch (error) {
       console.error(STRINGS.LOGS.ADMIN_DASHBOARD_ERROR_PREFIX, error.message);
-      response.render("admin-dashboard", {
-        currentAdmin: response.locals.admin,
-        users: [],
-        endpointStats: [],
+      return response.status(500).json({
+        success: false,
+        message: STRINGS.RESPONSES.ERROR_SERVER,
       });
     }
   }

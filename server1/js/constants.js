@@ -1,9 +1,11 @@
 // Local backend server (cannot use env vars in frontend)
-// export const BACKEND_SERVER_URL = "http://localhost:3000/api";
+// const API_HOST = "http://localhost:3000";
 
-// // Deployed Backend server
-export const BACKEND_SERVER_URL =
-  "https://comp4537-group5-9lwth.ondigitalocean.app/api/v1";
+// Deployed Backend server
+const API_HOST = "https://comp4537-group5-9lwth.ondigitalocean.app";
+
+export const BACKEND_SERVER_URL = `${API_HOST}/api/v1`;
+export const ADMIN_SERVER_URL = `${API_HOST}/admin`;
 
 // Route for TTS now proxies through the backend so API usage is tracked
 export const AI_SERVER_URL = `${BACKEND_SERVER_URL}/tts`;
@@ -14,11 +16,17 @@ export const ROUTES = {
   HOME_AUTHENTICATED: "/views/home.html?authenticated=true",
 };
 
+export const ADMIN_ROUTES = {
+  LOGIN: "/views/admin/login.html",
+  DASHBOARD: "/views/admin/dashboard.html",
+};
+
 export const AUTH_STORAGE_KEYS = {
   TOKEN: "auth_token",
   EMAIL: "auth_email",
   RESET_CODE: "auth_reset_code",
   SESSION_FLAG: "auth_session",
+  ADMIN_SESSION: "admin_session",
 };
 
 export const AUTH_SESSION_ACTIVE_VALUE = "1";
@@ -91,6 +99,20 @@ const UI_STRINGS = {
   AUDIO: {
     NO_AUDIO: "No audio data received from synthesis service.",
     MIME_WAV: AUDIO_MIME_WAV,
+  },
+  ADMIN: {
+    AUTH_REQUIRED: "Admin session expired. Please log in again.",
+    LOGIN: {
+      LOGGING_IN: "Logging in as admin...",
+      SUCCESS_PREFIX: "Success!",
+      ERROR_PREFIX: "Error:",
+    },
+    DASHBOARD: {
+      LOAD_ERROR_PREFIX: "Failed to load admin dashboard:",
+      DELETE_SUCCESS: "User deleted successfully",
+      RESET_SUCCESS: "API usage reset successfully",
+      CREATE_ADMIN_SUCCESS: "Admin account created successfully",
+    },
   },
 };
 
