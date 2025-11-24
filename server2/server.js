@@ -374,6 +374,23 @@ adminRouter.delete(
         });
       }
 
+      // Check if target user exists and get their info
+      const targetUser = await db.getUserById(userId);
+      if (!targetUser) {
+        return response.status(404).json({
+          success: false,
+          message: STRINGS.ADMIN.USER_NOT_FOUND,
+        });
+      }
+
+      // Prevent deletion of admin users
+      if (targetUser.is_admin) {
+        return response.status(403).json({
+          success: false,
+          message: STRINGS.ADMIN.CANNOT_DELETE_ADMIN,
+        });
+      }
+
       // Delete user using database method
       const result = await db.deleteUser(userId);
 
