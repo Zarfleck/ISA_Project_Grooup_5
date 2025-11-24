@@ -1,9 +1,9 @@
-// // Local backend server (cannot use env vars in frontend)
-// export const BACKEND_SERVER_URL = "http://localhost:3000/api";
+// Local backend server (cannot use env vars in frontend)
+export const BACKEND_SERVER_URL = "http://localhost:3000/api/v1";
 
-// Deployed Backend server
-export const BACKEND_SERVER_URL =
-  "https://comp4537-group5-9lwth.ondigitalocean.app/api";
+// // Deployed Backend server
+// export const BACKEND_SERVER_URL =
+//   "https://comp4537-group5-9lwth.ondigitalocean.app/api/v1";
 
 // Route for TTS now proxies through the backend so API usage is tracked
 export const AI_SERVER_URL = `${BACKEND_SERVER_URL}/tts`;
@@ -38,7 +38,7 @@ const UI_STRINGS = {
   ERROR_UNAUTHORIZED:
     "You must be logged in to use this service. Please register or login.",
   API_LIMIT_WARNING:
-    "You have reached your maximum free API calls (20). You can't use our AI service until the limit reset for you by admin.",
+    "You have reached your maximum free API calls (20). You can still try generating audio, but requests may be blocked until an admin resets your limit.",
   HEADER: {
     FALLBACK_USER: "User",
     LOAD_ERROR_PREFIX: "Failed to load user info:",
@@ -55,7 +55,10 @@ const UI_STRINGS = {
     PLAYER_ERROR: "Failed to generate audio. Please try again.",
     PLAYER_DISABLED:
       "Audio is currently disabled. Generate speech to enable playback.",
-    API_LIMIT_REACHED: "You have reached your API call limit.",
+    API_LIMIT_REACHED:
+      "API limit reached. Generation may fail until an admin resets your limit.",
+    API_LIMIT_CONFIRM:
+      "You have reached your API call limit. Continue and try generating audio anyway?",
     ENTER_TEXT: "Please enter some text to synthesize.",
     DOWNLOAD_FALLBACK: "generated_speech.wav",
     BUTTON_GENERATING: "Generating...",
