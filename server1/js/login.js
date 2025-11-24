@@ -29,8 +29,8 @@ async function handleLogin() {
       const respond = await backendApi.login(email, password);
 
       if (respond.success) {
-        const token = respond.token || respond.data?.token;
-        setToken(token);
+        // Token is set as httpOnly cookie by server, just set session flag
+        setToken(null);
 
         messageDiv.innerHTML = `<div class="p-2 text-sm text-green-600 bg-green-50 dark:bg-green-900 dark:text-green-400 rounded-lg" role="alert">${UI_STRINGS.LOGIN.SUCCESS_PREFIX} ${respond.message}</div>`;
 
@@ -41,8 +41,12 @@ async function handleLogin() {
         messageDiv.innerHTML = `<div class="p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900 dark:text-red-400 rounded-lg" role="alert">${UI_STRINGS.LOGIN.ERROR_PREFIX} ${respond.message}</div>`;
       }
     } catch (error) {
-      messageDiv.innerHTML = `<div class="p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900 dark:text-red-400 rounded-lg" role="alert">${error}</div>`;
+      const errorMessage = error.message || error.toString();
+      messageDiv.innerHTML = `<div class="p-2 text-sm text-red-600 bg-red-50 dark:bg-red-900 dark:text-red-400 rounded-lg" role="alert">${UI_STRINGS.LOGIN.ERROR_PREFIX} ${errorMessage}</div>`;
       console.error(UI_STRINGS.LOGIN.ERROR_LOG_PREFIX, error);
+      if (error.status === 401) {
+        console.error("Authentication failed. Please check your email and password.");
+      }
     }
   } finally {
     if (submitBtn) submitBtn.disabled = false;

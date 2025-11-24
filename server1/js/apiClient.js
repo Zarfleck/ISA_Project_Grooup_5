@@ -61,7 +61,12 @@ async function makeRequest(
     if (token) headers["Authorization"] = `Bearer ${token}`; // Attach JWT if available
   }
 
-  const respond = await fetch(`${baseUrl}${path}`, {
+  const fullUrl = `${baseUrl}${path}`;
+  if (path.includes("/auth/login")) {
+    console.log("Login request URL:", fullUrl);
+  }
+  
+  const respond = await fetch(fullUrl, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
