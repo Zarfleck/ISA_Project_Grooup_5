@@ -5,14 +5,17 @@ import { generateToken } from "../auth.js";
 import { setTokenCookie, clearTokenCookie } from "../utils/cookies.js";
 import { createApiStatsMiddleware } from "../middleware/apiStats.js";
 
-export function createAdminRouter(db, STRINGS, requireAdminAuth, redirectIfAuthenticated) {
+export function createAdminRouter(db, STRINGS, requireAdminAuth) {
   const adminRouter = express.Router();
 
   // Create admin middleware with /admin prefix
   const adminStatsMiddleware = createApiStatsMiddleware(db, STRINGS, "/admin");
 
-  adminRouter.get("/login", (request, response) => {
-    response.render("login");
+  adminRouter.get("/login", (_request, response) => {
+    response.status(200).json({
+      success: true,
+      message: "Admin login endpoint. POST credentials to authenticate.",
+    });
   });
 
   adminRouter.post("/login", async (request, response) => {
@@ -60,13 +63,20 @@ export function createAdminRouter(db, STRINGS, requireAdminAuth, redirectIfAuthe
     }
   });
 
-  adminRouter.get("/", redirectIfAuthenticated, (request, response) => {
-    response.redirect("/admin/login");
+  adminRouter.get("/", (_request, response) => {
+    response.status(200).json({
+      success: true,
+      message: "Admin API root. POST to /admin/login to begin.",
+    });
   });
 
   // Add new admin route
-  adminRouter.get("/add-admin", (request, response) => {
-    response.render("add-admin");
+  adminRouter.get("/add-admin", (_request, response) => {
+    response.status(200).json({
+      success: true,
+      message:
+        "Send POST /admin/add-admin with email and password to create an admin.",
+    });
   });
 
   adminRouter.post("/add-admin", async (request, response) => {
@@ -111,7 +121,10 @@ export function createAdminRouter(db, STRINGS, requireAdminAuth, redirectIfAuthe
   // Admin logout route
   adminRouter.get("/logout", (request, response) => {
     clearTokenCookie(response);
-    response.redirect("/admin/login");
+    return response.status(200).json({
+      success: true,
+      message: STRINGS.LOGOUT.SUCCESS,
+    });
   });
 
   // Admin dashboard route
@@ -124,17 +137,20 @@ export function createAdminRouter(db, STRINGS, requireAdminAuth, redirectIfAuthe
         const users = await db.getAllUsersWithApiUsage();
         const endpointStats = await db.getEndpointStatistics();
 
-        response.render("admin-dashboard", {
-          currentAdmin: response.locals.admin,
+        return response.status(200).json({
+          success: true,
+          admin: {
+            userId: request.admin?.user_id,
+            email: request.admin?.email,
+          },
           users,
           endpointStats,
         });
       } catch (error) {
         console.error(STRINGS.LOGS.ADMIN_DASHBOARD_ERROR_PREFIX, error.message);
-        response.render("admin-dashboard", {
-          currentAdmin: response.locals.admin,
-          users: [],
-          endpointStats: [],
+        return response.status(500).json({
+          success: false,
+          message: STRINGS.RESPONSES.ERROR_SERVER,
         });
       }
     }

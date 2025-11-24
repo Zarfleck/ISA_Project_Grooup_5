@@ -11,14 +11,14 @@ export const ADMIN_SERVER_URL = `${API_HOST}/admin`;
 export const AI_SERVER_URL = `${BACKEND_SERVER_URL}/tts`;
 
 export const ROUTES = {
-  LOGIN: "/views/login.html",
-  HOME: "/views/home.html",
-  HOME_AUTHENTICATED: "/views/home.html?authenticated=true",
+  LOGIN: "/user/login.html",
+  HOME: "/user/home.html",
+  HOME_AUTHENTICATED: "/user/home.html?authenticated=true",
 };
 
 export const ADMIN_ROUTES = {
-  LOGIN: "/views/admin/login.html",
-  DASHBOARD: "/views/admin/dashboard.html",
+  LOGIN: "/admin/login.html",
+  DASHBOARD: "/admin/dashboard.html",
 };
 
 export const AUTH_STORAGE_KEYS = {
