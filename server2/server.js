@@ -36,7 +36,7 @@ const AI_SERVER_URL =
 
 // Set EJS as the templating engine
 app.set("view engine", "ejs");
-app.set("views", path.join(process.cwd(), "views"));
+app.set("views", path.join(dirname(fileURLToPath(import.meta.url)), "views"));
 
 app.use(express.json());
 app.use(cookieParser());
@@ -55,7 +55,13 @@ const defaultOrigins = [
 
 app.use(
   cors({
-    origin: allowedOrigins.length > 0 ? allowedOrigins : defaultOrigins,
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:8080",
+      "http://127.0.0.1:8080",
+      "https://4537fe.netlify.app",
+      "https://isa-server1.netlify.app",
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -167,6 +173,40 @@ export async function requireUserAuth(request, response, next) {
  */
 const adminRouter = express.Router();
 
+// createApiStatsMiddleware variable is created by Claude Sonnet 4 (https://claude.ai/)
+// Universal API logging middleware factory - creates middleware for any route type
+const createApiStatsMiddleware = (pathPrefix = '') => {
+  return async (req, res, next) => {
+    // Store original end function
+    const originalEnd = res.end;
+    
+    // Override end function to log after response
+    res.end = function(...args) {
+      // Call original end function first
+      originalEnd.apply(this, args);
+      
+      // Log API usage asynchronously (don't block response) 
+      const user = req.user || req.admin; // Works for both user and admin routes
+      if (user && req.path.startsWith('/')) {
+        // Use setImmediate to avoid blocking the response
+        setImmediate(async () => {
+          try {
+            const fullPath = pathPrefix + req.path;
+            await db.logApiUsage(user.user_id, fullPath, req.method, 'en');
+          } catch (error) {
+            console.error('API logging error:', error.message);
+          }
+        });
+      }
+    };
+    
+    next();
+  };
+};
+
+// Create admin middleware with /admin prefix
+const adminStatsMiddleware = createApiStatsMiddleware('/admin');
+
 adminRouter.get("/login", (request, response) => {
   response.render("login");
 });
@@ -276,16 +316,28 @@ adminRouter.get("/logout", (request, response) => {
 });
 
 // Admin dashboard route
-adminRouter.get("/dashboard", requireAdminAuth, async (request, response) => {
-  const users = await db.getAllUsersWithApiUsage();
-  response.render("admin-dashboard", {
-    currentAdmin: response.locals.admin,
-    users,
-  });
+adminRouter.get("/dashboard", adminStatsMiddleware, requireAdminAuth, async (request, response) => {
+  try {
+    const users = await db.getAllUsersWithApiUsage();
+    const endpointStats = await db.getEndpointStatistics();
+    
+    response.render("admin-dashboard", {
+      currentAdmin: response.locals.admin,
+      users,
+      endpointStats,
+    });
+  } catch (error) {
+    console.error("Admin dashboard error:", error.message);
+    response.render("admin-dashboard", {
+      currentAdmin: response.locals.admin,
+      users: [],
+      endpointStats: [],
+    });
+  }
 });
 
 // DELETE /admin/users/:id - Admin delete user endpoint
-adminRouter.delete("/users/:id", requireAdminAuth, async (request, response) => {
+adminRouter.delete("/users/:id", adminStatsMiddleware, requireAdminAuth, async (request, response) => {
   try {
     const userId = parseInt(request.params.id);
     
@@ -329,7 +381,7 @@ adminRouter.delete("/users/:id", requireAdminAuth, async (request, response) => 
 });
 
 // PATCH /admin/users/:id/reset-usage - Admin reset user API usage
-adminRouter.patch("/users/:id/reset-usage", requireAdminAuth, async (request, response) => {
+adminRouter.patch("/users/:id/reset-usage", adminStatsMiddleware, requireAdminAuth, async (request, response) => {
   try {
     const userId = parseInt(request.params.id);
     
@@ -387,6 +439,12 @@ app.use("/admin", adminRouter);
  * USER ROUTES
  */
 const userRouter = express.Router();
+
+// Create user middleware with no prefix (standard API paths)
+const apiStatsMiddleware = createApiStatsMiddleware('');
+
+// Apply API logging middleware to all user routes
+userRouter.use(apiStatsMiddleware);
 
 // Signup route
 userRouter.post("/auth/signup", async (request, response) => {
